@@ -180,6 +180,25 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .ring svg{transform:rotate(-90deg)}
 .ring .rv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.1}
 .ring .rv b{font-size:26px;letter-spacing:-.02em} .ring .rv span{font-size:11px;opacity:.85}
+/* cartes de l'accueil */
+.tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:16px}
+.tile{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0;
+  transition:transform .15s ease,box-shadow .15s ease;-webkit-tap-highlight-color:transparent}
+.tile:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(16,24,40,.12)}
+.tile:active{transform:scale(.98)}
+.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.tile-top{display:flex;align-items:center;gap:10px}
+.tile-ic{width:36px;height:36px;border-radius:11px;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.tile-t{font-weight:650;flex:1;color:var(--text)}
+.tile-go{color:var(--muted);font-size:22px;line-height:1}
+.tile-val{font-size:24px;font-weight:700;letter-spacing:-.02em;color:var(--text);font-variant-numeric:tabular-nums}
+.tile-val small{font-size:13px;font-weight:500;color:var(--text-2);letter-spacing:0}
+.tile-sub{font-size:12.5px;color:var(--text-2);line-height:1.35}
+.tile .bar{height:6px}
+.backbtn{all:unset;cursor:pointer;color:var(--accent);font-weight:600;padding:4px 2px 12px;display:inline-block}
+.backbtn.hide{display:none}
+#payForm>label:first-child,#payForm>details,#payForm>label:has(input[name=addTx]){grid-column:1/-1 !important}
+@media (max-width:760px){ .tiles{grid-template-columns:1fr 1fr;gap:10px} .tile{padding:13px;gap:6px} .tile-val{font-size:19px} .tile-ic{width:32px;height:32px;font-size:16px} .tile-sub{font-size:11.5px} }
 input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 30%,transparent)}
 /* icônes de catégories */
 .av{width:34px;height:34px;border-radius:11px;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-size:17px;flex:none}
@@ -233,10 +252,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
     <button data-v="tx"><span class="ic">🧾</span><span class="lb">Transactions</span><span class="sh">Opérations</span></button>
     <button data-v="budget"><span class="ic">🎯</span><span class="lb">Budgets</span><span class="sh">Budgets</span></button>
     <button data-v="goals"><span class="ic">🏁</span><span class="lb">Objectifs</span><span class="sh">Objectifs</span></button>
-    <button data-v="wealth"><span class="ic">🏦</span><span class="lb">Patrimoine</span><span class="sh">Patrimoine</span></button>
     <button data-v="pay"><span class="ic">💼</span><span class="lb">Salaire</span><span class="sh">Salaire</span></button>
-    <button data-v="sim"><span class="ic">📈</span><span class="lb">Simulateur</span><span class="sh">Simuler</span></button>
-    <button data-v="settings"><span class="ic">⚙️</span><span class="lb">Données</span><span class="sh">Données</span></button>
   </nav>
   <span class="spacer"></span>
   <input type="month" id="month" title="Mois affiché">
@@ -244,9 +260,11 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 </div></header>
 
 <main>
+<button id="backHome" class="backbtn hide" onclick="go('dash')">‹ Accueil</button>
 <!-- TABLEAU DE BORD -->
 <section id="v-dash">
   <div id="kpis"></div>
+  <div class="tiles" id="tiles"></div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>Revenus et dépenses <small>6 derniers mois</small></h2>
       <div class="legend"><span><i style="background:var(--s1)"></i>Revenus</span><span><i style="background:var(--s2)"></i>Dépenses</span></div>
@@ -330,35 +348,33 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 
 <!-- SALAIRE -->
 <section id="v-pay" class="hide">
-  <div class="grid g4" id="payKpis"></div>
-  <div class="grid g2" style="margin-top:16px">
+  <div class="grid g2">
     <div class="card">
-      <h2>Ajouter un bulletin de salaire</h2>
-      <p class="small muted">Le PDF est lu <b>sur cet appareil uniquement</b> : il n'est ni envoyé ni conservé, seuls les montants vérifiés par vous sont enregistrés (chiffrés).</p>
-      <div class="toolbar">
-        <label class="btn primary">Choisir le bulletin (PDF)…<input type="file" accept="application/pdf,.pdf" class="hide" onchange="readPayslip(this)"></label>
-        <button class="btn" onclick="openPayForm({})">Saisir à la main</button>
-      </div>
-      <p id="payMsg" class="small"></p>
-      <form id="payForm" class="form hide">
-        <label>Mois du bulletin<input type="month" name="mois" required></label>
-        <label>Date de versement<input type="date" name="date"></label>
-        <label>Salaire brut (€)<input type="number" step="0.01" min="0" name="brut"></label>
-        <label>Net avant impôt (€)<input type="number" step="0.01" min="0" name="netAvant"></label>
-        <label>Impôt prélevé à la source (€)<input type="number" step="0.01" min="0" name="pas"></label>
-        <label>Taux de prélèvement (%)<input type="number" step="0.1" min="0" name="taux"></label>
-        <label>Net à payer (€)<input type="number" step="0.01" min="0" name="net" required></label>
-        <label>Net imposable (€)<input type="number" step="0.01" min="0" name="netImposable"></label>
-        <label>Dont primes / variable (€)<input type="number" step="0.01" min="0" name="primes"></label>
-        <label style="grid-column:span 2"><span><input type="checkbox" name="addTx" checked> Créer l'opération « Salaire » (net à payer) dans les transactions</span></label>
-        <div class="toolbar" style="margin:0"><button class="btn primary">Enregistrer</button><button type="button" class="btn" onclick="closePayForm()">Annuler</button></div>
+      <h2>Ajouter mon salaire du mois</h2>
+      <p class="small muted">Recopiez les 3 montants clés de votre bulletin, en bas de page. Seul le net à payer est obligatoire.</p>
+      <form id="payForm" class="form">
+        <label>Mois<input type="month" name="mois" required></label>
+        <label>Net à payer (€) *<input type="number" step="0.01" min="0" name="net" required inputmode="decimal" placeholder="ex. 2 480"></label>
+        <label>Salaire brut (€)<input type="number" step="0.01" min="0" name="brut" inputmode="decimal" placeholder="facultatif"></label>
+        <label>Impôt prélevé (€)<input type="number" step="0.01" min="0" name="pas" inputmode="decimal" placeholder="facultatif"></label>
+        <details style="grid-column:1/-1" class="small"><summary class="muted" style="cursor:pointer;padding:4px 0">Plus de détails (facultatif)</summary>
+          <div class="form" style="margin-top:8px">
+            <label>Date de versement<input type="date" name="date"></label>
+            <label>Net imposable (€)<input type="number" step="0.01" min="0" name="netImposable" inputmode="decimal"></label>
+            <label>Taux de prélèvement (%)<input type="number" step="0.1" min="0" name="taux" inputmode="decimal"></label>
+            <label>Dont primes (€)<input type="number" step="0.01" min="0" name="primes" inputmode="decimal"></label>
+            <input type="hidden" name="netAvant">
+          </div></details>
+        <label style="grid-column:1/-1"><span><input type="checkbox" name="addTx" checked> Ajouter aussi le salaire aux opérations du mois</span></label>
+        <div class="toolbar" style="margin:0"><button class="btn primary">Enregistrer</button></div>
       </form>
-      <details id="payRaw" class="small hide" style="margin-top:10px"><summary class="muted">Voir le texte lu dans le PDF</summary><pre style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre></details>
+      <p id="payMsg" class="small"></p>
     </div>
     <div class="card"><h2>Évolution de la rémunération</h2>
       <div class="legend"><span><i style="background:var(--s1)"></i>Brut</span><span><i style="background:var(--s3)"></i>Net à payer</span></div>
       <div id="chPay"></div></div>
   </div>
+  <div class="grid g4" id="payKpis" style="margin-top:16px"></div>
   <div class="card" style="margin-top:16px">
     <h2>Mes bulletins</h2>
     <div class="tblwrap"><table><thead><tr><th>Mois</th><th class="num">Brut</th><th class="num">Net avant impôt</th><th class="num">Impôt (taux)</th><th class="num">Net à payer</th><th class="num">Net imposable</th><th></th></tr></thead><tbody id="payBody"></tbody></table></div>
@@ -664,7 +680,34 @@ function renderDash(){
   lineChart($('#chCum'), m12.map(x=>monthLabel(x,true)), [{name:'Épargne cumulée',color:'var(--s1)',values:cum,fill:true}]);
 
   renderAdvice(m,t);
+  renderTiles(m,t);
 }
+
+/* Cartes cliquables de l'accueil : un résumé vivant de chaque rubrique */
+function renderTiles(m,t){
+  const txM=S.tx.filter(x=>ym(x.date)===m), last=txM.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const spent={}; for(const x of txM) if(x.type==='depense') spent[x.categorie]=(spent[x.categorie]||0)+x.montant;
+  const buds=Object.entries(S.budgets).filter(([,b])=>b>0), over=buds.filter(([c,b])=>(spent[c]||0)>b).length;
+  const gT=S.goals.reduce((s,g)=>s+g.cible,0), gA=S.goals.reduce((s,g)=>s+Math.min(g.actuel,g.cible),0);
+  const ps=S.payslips.slice().sort((a,b)=>a.mois.localeCompare(b.mois)).at(-1);
+  const w=S.assets.length?wealthAt(m):null, wp=w?wealthAt(addMonths(m,-1)):null;
+  const days=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/864e5):null, oldBk=days==null||days>30;
+  const T=[
+    {v:'tx',ic:'🧾',t:'Opérations',val:`${txM.length}`,unit:txM.length>1?' ce mois':' ce mois',sub:last?`Dernière : ${esc(last.libelle||last.categorie)} · ${last.type==='revenu'?'+':'−'}${eur(last.montant)}`:'Ajoutez votre première opération'},
+    {v:'budget',ic:'🎯',t:'Budgets',val:buds.length?`${buds.length-over}/${buds.length}`:'—',unit:buds.length?' respectés':'',sub:buds.length?(over?`<span class="neg">${over} dépassé${over>1?'s':''}</span>`:'<span class="pos">Tout est sous contrôle</span>'):'Fixez vos plafonds mensuels',bar:buds.length?(buds.length-over)/buds.length:null},
+    {v:'goals',ic:'🏁',t:'Objectifs',val:S.goals.length?Math.round(gA/gT*100)+' %':'—',unit:S.goals.length?' atteint':'',sub:S.goals.length?`${S.goals.length} objectif${S.goals.length>1?'s':''} · ${eur(gA)} sur ${eur(gT)}`:'Épargne de précaution, projet…',bar:S.goals.length?gA/gT:null},
+    {v:'pay',ic:'💼',t:'Salaire',val:ps?eur(ps.net):'—',unit:'',sub:ps?`Net · ${monthLabel(ps.mois)}`:'Ajoutez votre bulletin du mois'},
+    {v:'wealth',ic:'🏦',t:'Patrimoine',val:w?eur(w.net):'—',unit:'',sub:w?`<span class="${w.net>=wp.net?'pos':'neg'}">${w.net>=wp.net?'+':''}${eur(w.net-wp.net)}</span> sur 1 mois`:'Comptes, livrets, placements, crédits'},
+    {v:'sim',ic:'📈',t:'Simulateur',val:'',unit:'',sub:'Projetez votre épargne avec les intérêts composés'},
+    {v:'settings',ic:'⚙️',t:'Données',val:'',unit:'',sub:oldBk?`<span style="color:var(--warn)">${days==null?'Aucune sauvegarde exportée':`Dernière sauvegarde il y a ${days} j`}</span>`:`Sauvegardé il y a ${days} j · import bancaire, sécurité`}
+  ];
+  $('#tiles').innerHTML=T.map(x=>`<button class="tile" data-go="${x.v}">
+    <span class="tile-top"><span class="tile-ic">${x.ic}</span><span class="tile-t">${x.t}</span><span class="tile-go">›</span></span>
+    ${x.val?`<span class="tile-val">${x.val}<small>${x.unit}</small></span>`:''}
+    ${x.bar!=null?`<span class="bar"><i style="width:${Math.round(x.bar*100)}%"></i></span>`:''}
+    <span class="tile-sub">${x.sub}</span></button>`).join('');
+}
+$('#tiles').addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
 
 function renderAdvice(m,t){
   const el=$('#advice');
@@ -951,11 +994,20 @@ function openPayForm(r){
     el.title = el.classList.contains('doubt') ? 'Valeur lue mais non confirmée : vérifiez-la sur le bulletin' : ''; el.oninput=()=>el.classList.remove('doubt'); }
   if(!f.mois.value) f.mois.value=curMonth();
   f.addTx.checked = !salaryTxFor(f.mois.value, r.net); f.mois.focus(); }
-function closePayForm(){ $('#payForm').classList.add('hide'); $('#payRaw').classList.add('hide'); $('#payMsg').textContent=''; }
+// remet le formulaire à zéro, prêt pour le mois suivant le dernier bulletin saisi
+function closePayForm(){ const f=$('#payForm'); f.reset(); f.querySelectorAll('.doubt').forEach(x=>x.classList.remove('doubt')); payDefaultMonth(); }
+function payDefaultMonth(){ const f=$('#payForm'); if(f.mois.value) return;
+  const last=S.payslips.map(p=>p.mois).sort().at(-1), now=ym(new Date().toISOString());
+  f.mois.value = last && addMonths(last,1)<=now ? addMonths(last,1) : now; f.addTx.checked=!salaryTxFor(f.mois.value); }
+$('#payForm').mois.addEventListener('change',e=>{ e.target.form.addTx.checked=!salaryTxFor(e.target.value); });
 // une opération Salaire existe-t-elle déjà ce mois-ci (par ex. importée depuis la banque) ?
 function salaryTxFor(m,net){ return S.tx.find(t=>t.type==='revenu' && t.categorie==='Salaire' && (ym(t.date)===m || ym(t.date)===addMonths(m,1)) && (!net || Math.abs(t.montant-net)<1)); }
 $('#payForm').onsubmit=e=>{ e.preventDefault(); const f=e.target, n=k=>f[k].value===''?null:+f[k].value;
   const p={id:uid(),mois:f.mois.value,date:f.date.value||null,brut:n('brut'),netAvant:n('netAvant'),pas:n('pas'),taux:n('taux'),net:n('net'),netImposable:n('netImposable'),primes:n('primes')};
+  // montants déduits : net avant impôt = net + impôt ; taux = impôt / net imposable
+  if(p.netAvant==null && p.net!=null) p.netAvant=Math.round((p.net+(p.pas||0))*100)/100;
+  if(p.taux==null && p.pas && p.netImposable) p.taux=Math.round(p.pas/p.netImposable*1000)/10;
+  if(p.brut!=null && p.net!=null && p.net>p.brut && !confirm('Le net est supérieur au brut : vérifiez les montants. Enregistrer quand même ?')) return;
   const dup=S.payslips.find(x=>x.mois===p.mois);
   if(dup && !confirm(`Un bulletin existe déjà pour ${monthLabel(p.mois)}. Le remplacer ?`)) return;
   if(dup) S.payslips=S.payslips.filter(x=>x!==dup);
@@ -964,6 +1016,7 @@ $('#payForm').onsubmit=e=>{ e.preventDefault(); const f=e.target, n=k=>f[k].valu
       const t={id:uid(),date:p.date||p.mois+'-28',type:'revenu',montant:p.net,categorie:'Salaire',libelle:'Salaire '+monthLabel(p.mois),payslip:p.id}; S.tx.push(t); p.tx=t.id; } }
   S.payslips.push(p); save(); closePayForm(); $('#payMsg').innerHTML=`<span class="pos">Bulletin de ${monthLabel(p.mois)} enregistré.</span>`; renderPay(); };
 function renderPay(){
+  payDefaultMonth();
   const ps=S.payslips.slice().sort((a,b)=>a.mois.localeCompare(b.mois)), last=ps.at(-1);
   const y=curMonth().slice(0,4), ofYear=ps.filter(p=>p.mois.startsWith(y)), sum=k=>ofYear.reduce((s,p)=>s+(p[k]||0),0);
   const yearAgo=last && ps.find(p=>p.mois===addMonths(last.mois,-12));
@@ -1022,7 +1075,7 @@ function applyTheme(){ if(S.theme) document.documentElement.dataset.theme=S.them
 
 /* ===================== Import / export ===================== */
 function download(name,text,type){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type})); a.download=name; a.click(); URL.revokeObjectURL(a.href); }
-async function exportJSON(){ await saving; const blob=await encryptWith(CK,SALT,JSON.stringify(S));
+async function exportJSON(){ S.lastBackup=Date.now(); save(); await saving; const blob=await encryptWith(CK,SALT,JSON.stringify(S));
   download(`finances-${new Date().toISOString().slice(0,10)}.gfp.json`, JSON.stringify(blob),'application/json'); }
 $('#pwForm').onsubmit=async e=>{ e.preventDefault(); const f=e.target, msg=$('#pwMsg');
   if(f.n1.value.length<MIN_CODE) return msg.innerHTML=`<span class="neg">${MIN_CODE} caractères minimum.</span>`;
@@ -1142,6 +1195,8 @@ function loadDemo(){
 let view='dash';
 function go(v){ view=v;
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
+  // rubriques accessibles seulement par les cartes de l'accueil : bouton « ‹ Accueil »
+  $('#backHome').classList.toggle('hide', v==='dash' || !!document.querySelector(`#nav [data-v="${v}"]`));
   document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!=='v-'+v)); scrollTo(0,0); render(); }
 $('#nav').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(b) go(b.dataset.v); };
 function quickAdd(){ go('tx'); const f=$('#txForm'); f.date.value=new Date().toISOString().slice(0,10); setTimeout(()=>f.montant.focus(),50); }
