@@ -118,6 +118,91 @@ nav .ic,nav .sh{display:none}
   #txBody td:nth-child(5){grid-area:3/2;align-self:center}
   #txBody td[colspan]{grid-area:auto;grid-column:1/-1}
 }
+/* =================== Thème visuel =================== */
+:root{
+  --bg:#f2f4f8; --surface:#ffffff; --surface-2:#eef1f6; --border:#e3e7ee;
+  --text:#101828; --text-2:#475467; --muted:#8a94a6;
+  --accent:#2a78d6; --accent-2:#6250d6; --accent-soft:#e8f0fb;
+  --grad:linear-gradient(135deg,#2a78d6 0%,#4a5fd8 55%,#6250d6 100%);
+  --shadow:0 1px 2px rgba(16,24,40,.04),0 6px 20px rgba(16,24,40,.06);
+  --shadow-lg:0 12px 32px rgba(42,80,214,.28);
+  --grid:#edf0f4;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1015; --surface:#171a21; --surface-2:#20242d; --border:#2a2f3a;
+    --text:#f0f2f6; --text-2:#c2c8d3; --muted:#8890a0; --accent-soft:#1c2a40;
+    --grad:linear-gradient(135deg,#2c6fc4 0%,#4553c0 55%,#5a49c4 100%);
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); --shadow-lg:0 12px 32px rgba(0,0,0,.45); --grid:#23272f;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1015; --surface:#171a21; --surface-2:#20242d; --border:#2a2f3a;
+  --text:#f0f2f6; --text-2:#c2c8d3; --muted:#8890a0; --accent-soft:#1c2a40;
+  --grad:linear-gradient(135deg,#2c6fc4 0%,#4553c0 55%,#5a49c4 100%);
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.25); --shadow-lg:0 12px 32px rgba(0,0,0,.45); --grid:#23272f;
+}
+body{font-family:"Segoe UI Variable Text","Segoe UI",system-ui,-apple-system,Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+header{background:color-mix(in srgb,var(--surface) 85%,transparent);backdrop-filter:saturate(1.6) blur(12px);-webkit-backdrop-filter:saturate(1.6) blur(12px)}
+h1{display:flex;align-items:center;gap:9px;letter-spacing:-.01em}
+.logo{width:30px;height:30px;border-radius:9px;background:var(--grad);display:inline-flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(42,80,214,.35);flex:none}
+.logo svg{width:18px;height:18px}
+nav button{transition:background .15s,color .15s;font-weight:500;padding:8px 10px}
+nav button:hover{color:var(--text)}
+nav button.on{background:var(--accent-soft);color:var(--accent);font-weight:650}
+.card{border-radius:16px;border-color:transparent;box-shadow:var(--shadow);padding:18px}
+.card h2{font-size:15.5px;letter-spacing:-.01em}
+.kpi .val{font-size:27px;letter-spacing:-.02em}
+.kpi .lbl{font-weight:500}
+.btn{border-radius:10px;font-weight:500;transition:transform .1s,box-shadow .15s,background .15s}
+.btn:active{transform:scale(.98)}
+.btn.primary{background:var(--grad);border-color:transparent;box-shadow:0 4px 12px rgba(42,80,214,.28)}
+.btn.primary:hover{box-shadow:0 6px 16px rgba(42,80,214,.36)}
+input,select{border-radius:10px}
+.bar{height:9px;border-radius:5px}
+.bar>i{border-radius:5px;transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.tag{background:var(--accent-soft);color:var(--accent);font-weight:600}
+th{border-bottom-color:var(--border)} td{border-bottom-color:var(--surface-2)}
+tbody tr{transition:background .12s} tbody tr:hover{background:var(--surface-2)}
+main>section:not(.hide){animation:fadeUp .28s ease-out}
+@keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){ main>section:not(.hide){animation:none} .bar>i{transition:none} }
+/* carte d'accueil */
+.hero{background:var(--grad);color:#fff;border-radius:22px;padding:24px;display:flex;gap:20px;align-items:center;justify-content:space-between;box-shadow:var(--shadow-lg);position:relative;overflow:hidden}
+.hero::after{content:"";position:absolute;right:-60px;top:-80px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.08);pointer-events:none}
+.hero-lbl{font-size:13px;opacity:.85;font-weight:500}
+.hero-val{font-size:40px;font-weight:700;letter-spacing:-.03em;margin:4px 0 14px;font-variant-numeric:tabular-nums;line-height:1.1}
+.hero-chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:rgba(255,255,255,.16);border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap}
+.chip b{font-variant-numeric:tabular-nums;margin-left:3px}
+.hero-sub{font-size:12px;opacity:.8;margin-top:12px}
+.ring{position:relative;width:120px;height:120px;flex:none;z-index:1}
+.ring svg{transform:rotate(-90deg)}
+.ring .rv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.1}
+.ring .rv b{font-size:26px;letter-spacing:-.02em} .ring .rv span{font-size:11px;opacity:.85}
+/* icônes de catégories */
+.av{width:34px;height:34px;border-radius:11px;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-size:17px;flex:none}
+.lib{display:flex;align-items:center;gap:10px}
+.ci{display:inline-block;width:1.5em;text-align:center}
+/* verrouillage */
+#lock{background:var(--grad)}
+#lock .box{border:0;box-shadow:0 20px 50px rgba(0,0,0,.25);border-radius:22px}
+#lock .lk{width:64px;height:64px;margin:0 auto;border-radius:18px;background:var(--grad);display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(42,80,214,.35)}
+.lockbtn{border-radius:10px;background:var(--surface)}
+@media (max-width:760px){
+  /* un flou sur l'en-tête rattacherait la barre d'onglets (fixe) à l'en-tête au lieu du bas de l'écran */
+  header{backdrop-filter:none;-webkit-backdrop-filter:none;background:var(--surface)}
+  nav{background:color-mix(in srgb,var(--surface) 90%,transparent);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px)}
+  nav button.on{background:none;color:var(--accent)}
+  nav button.on .ic{background:var(--accent-soft);border-radius:12px;padding:1px 12px}
+  #fab{background:var(--grad);box-shadow:0 8px 22px rgba(42,80,214,.45)}
+  .hero{flex-direction:column;align-items:stretch;padding:20px;border-radius:20px}
+  .hero-val{font-size:36px}
+  .ring{position:absolute;right:16px;top:16px;width:84px;height:84px}
+  .ring .rv b{font-size:19px} .ring .rv span{font-size:9.5px}
+  .hero-main{padding-right:90px} .hero-chips{margin-right:-90px}
+  .h1t{display:none}
+}
 </style>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#2a78d6">
@@ -130,7 +215,7 @@ nav .ic,nav .sh{display:none}
 </head>
 <body>
 <div id="lock"><form class="box" id="lockForm" autocomplete="off">
-  <div style="font-size:40px">🔒</div>
+  <div class="lk"><svg viewBox="0 0 16 16" width="32" height="32" fill="#fff"><rect x="2.5" y="9" width="2.6" height="4.5" rx="1"/><rect x="6.7" y="6" width="2.6" height="7.5" rx="1"/><rect x="10.9" y="2.5" width="2.6" height="11" rx="1"/></svg></div>
   <h2 id="lockTitle">Mes Finances</h2>
   <p class="small muted" id="lockText">Chargement…</p>
   <input type="password" id="code1" autocomplete="current-password" placeholder="Code d'accès">
@@ -140,7 +225,7 @@ nav .ic,nav .sh{display:none}
   <button type="button" class="link small" id="forgot">Code oublié ?</button>
 </form></div>
 <header><div class="hwrap">
-  <h1>💶 Mes Finances</h1>
+  <h1><span class="logo"><svg viewBox="0 0 16 16" fill="#fff"><rect x="2.5" y="9" width="2.6" height="4.5" rx="1"/><rect x="6.7" y="6" width="2.6" height="7.5" rx="1"/><rect x="10.9" y="2.5" width="2.6" height="11" rx="1"/></svg></span>Mes Finances</h1>
   <nav id="nav">
     <button data-v="dash" class="on"><span class="ic">📊</span><span class="lb">Tableau de bord</span><span class="sh">Accueil</span></button>
     <button data-v="tx"><span class="ic">🧾</span><span class="lb">Transactions</span><span class="sh">Opérations</span></button>
@@ -159,7 +244,7 @@ nav .ic,nav .sh{display:none}
 <main>
 <!-- TABLEAU DE BORD -->
 <section id="v-dash">
-  <div class="grid g4" id="kpis"></div>
+  <div id="kpis"></div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>Revenus et dépenses <small>6 derniers mois</small></h2>
       <div class="legend"><span><i style="background:var(--s1)"></i>Revenus</span><span><i style="background:var(--s2)"></i>Dépenses</span></div>
@@ -454,6 +539,9 @@ function addMonths(m,k){ const [y,mo]=m.split('-').map(Number); const d=new Date
 const esc = s => String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const $ = s => document.querySelector(s);
 const catOf = n => S.cats.find(c=>c.nom===n);
+const CAT_ICONS = {'Salaire':'💼','Primes':'🎁','Autres revenus':'💶','Logement':'🏠','Alimentation':'🛒','Transport':'🚗','Énergie & télécom':'💡',
+  'Santé':'🩺','Assurances':'🛡️','Restaurants & sorties':'🍽️','Shopping':'🛍️','Loisirs & abonnements':'🎬','Voyages':'✈️','Épargne & investissement':'🐷','Divers':'📦'};
+const catIcon = n => CAT_ICONS[n] || '🏷️';
 const isSaving = t => t.type==='depense' && catOf(t.categorie)?.groupe==='epargne';
 function monthTotals(m){
   let rev=0,dep=0,ep=0;
@@ -535,13 +623,26 @@ function renderDash(){
   const m=curMonth(), t=monthTotals(m), prev=monthTotals(addMonths(m,-1));
   const rate = t.rev>0 ? (t.rev-t.dep)/t.rev : 0;
   const delta = (a,b) => b ? `${a>=b?'+':'−'}${Math.abs(Math.round((a-b)/b*100))} % vs mois précédent` : '—';
-  $('#kpis').innerHTML = [
-    ['Revenus', eur(t.rev), delta(t.rev,prev.rev), ''],
-    ['Dépenses (hors épargne)', eur(t.dep), delta(t.dep,prev.dep), ''],
-    ['Reste après épargne', eur(t.solde), `Épargné ce mois : ${eur(t.ep)}`, t.solde<0?'neg':''],
-    ['Taux d\'épargne', t.rev? Math.round(rate*100)+' %':'—', 'Objectif conseillé : ≥ 20 %', rate>=.2?'pos':rate<0?'neg':'']
-  ].concat(S.assets.length ? [(()=>{ const w=wealthAt(m), d=w.net-wealthAt(addMonths(m,-1)).net;
-    return ['Patrimoine net', eur(w.net), `${d>=0?'+':''}${eur(d)} vs mois précédent`, w.net<0?'neg':'']; })()] : []).map(([l,v,s,c])=>`<div class="card kpi"><div class="lbl">${l}</div><div class="val ${c}">${v}</div><div class="sub">${s}</div></div>`).join('');
+  // carte d'accueil : reste du mois, flux, taux d'épargne en anneau
+  const pct=t.rev?Math.round(rate*100):0, R=52, C=2*Math.PI*R, fill=Math.max(0,Math.min(1,rate));
+  const w = S.assets.length ? wealthAt(m) : null;
+  $('#kpis').innerHTML = `<div class="hero">
+    <div class="hero-main">
+      <div class="hero-lbl">Reste après épargne · ${monthLabel(m)}</div>
+      <div class="hero-val">${eur(t.solde)}</div>
+      <div class="hero-chips">
+        <span class="chip">↗ Revenus <b>${eur(t.rev)}</b></span>
+        <span class="chip">↘ Dépenses <b>${eur(t.dep)}</b></span>
+        <span class="chip">🐷 Épargné <b>${eur(t.ep)}</b></span>
+        ${w?`<span class="chip">🏦 Patrimoine <b>${eur(w.net)}</b></span>`:''}
+      </div>
+      <div class="hero-sub">Dépenses ${delta(t.dep,prev.dep)}</div>
+    </div>
+    <div class="ring" title="Taux d'épargne : part des revenus non dépensée">
+      <svg viewBox="0 0 120 120" width="100%" height="100%"><circle cx="60" cy="60" r="${R}" fill="none" stroke="rgba(255,255,255,.22)" stroke-width="10"/>
+        <circle cx="60" cy="60" r="${R}" fill="none" stroke="#fff" stroke-width="10" stroke-linecap="round" stroke-dasharray="${C*fill} ${C}"/></svg>
+      <div class="rv"><b>${t.rev?pct+' %':'—'}</b><span>épargne<br>objectif 20 %</span></div>
+    </div></div>`;
 
   const months=[...Array(6)].map((_,i)=>addMonths(m,i-5));
   barChart($('#chMonthly'), months.map(x=>monthLabel(x,true)), [
@@ -553,7 +654,7 @@ function renderDash(){
   const by={}; for(const x of S.tx) if(ym(x.date)===m && x.type==='depense') by[x.categorie]=(by[x.categorie]||0)+x.montant;
   const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]), tot=rows.reduce((a,r)=>a+r[1],0), mx=rows[0]?.[1]||1;
   $('#chCats').innerHTML = rows.length ? rows.map(([c,v])=>{ const b=S.budgets[c];
-    return `<div style="margin:8px 0"><div class="row small"><span>${esc(c)}${b?` <span class="tag">budget ${eur(b)}</span>`:''}</span><span><b>${eur(v)}</b> <span class="muted">${Math.round(v/tot*100)} %</span></span></div>
+    return `<div style="margin:8px 0"><div class="row small"><span><span class="ci">${catIcon(c)}</span>${esc(c)}${b?` <span class="tag">budget ${eur(b)}</span>`:''}</span><span><b>${eur(v)}</b> <span class="muted">${Math.round(v/tot*100)} %</span></span></div>
     <div class="bar"><i style="width:${v/mx*100}%" class="${b&&v>b?'over':''}"></i></div></div>`; }).join('') : '<div class="empty">Aucune dépense ce mois-ci.</div>';
 
   const m12=[...Array(12)].map((_,i)=>addMonths(m,i-11)); let c=0;
@@ -600,7 +701,7 @@ function renderTx(){
   const catOpts = t => S.cats.filter(x=>x.type===t.type).map(x=>`<option ${x.nom===t.categorie?'selected':''}>${esc(x.nom)}</option>`).join('');
   $('#txBody').innerHTML = list.length ? list.map(t=>`<tr>
     <td>${new Date(t.date+'T12:00').toLocaleDateString('fr-FR')}</td>
-    <td>${esc(t.libelle)}${t.rec?' <span class="tag">récurrent</span>':''}</td>
+    <td><div class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle)||'<span class="muted">Sans libellé</span>'}${t.rec?' <span class="tag">récurrent</span>':''}</span></div></td>
     <td class="tx-cat"><select data-cat="${t.id}">${catOpts(t)}</select></td>
     <td class="num ${t.type==='revenu'?'pos':''}">${t.type==='revenu'?'+':'−'}${eur2(t.montant)}</td>
     <td class="num"><button class="link" data-del="${t.id}" title="Supprimer">✕</button></td></tr>`).join('')
