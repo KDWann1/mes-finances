@@ -200,6 +200,8 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .fx-del:hover{color:var(--bad)}
 .fx-add{margin-top:12px} .fx-add>summary{list-style:none;display:inline-block} .fx-add>summary::-webkit-details-marker{display:none}
 #fxRestore{display:block;margin-top:10px}
+.imp-sav{margin-top:12px;padding:10px 12px;background:var(--surface);border-radius:12px}
+.fx-h{font-size:14.5px;margin:16px 0 4px} .fx-h small{font-weight:400;color:var(--muted);margin-left:4px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:70;
   background:var(--text);color:var(--surface);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100vw - 32px);transition:all .25s}
 .toast.on{opacity:1;transform:translate(-50%,0)}
@@ -566,6 +568,8 @@ const DEFAULT_CATS = [
   {nom:'Épargne & investissement',type:'depense',groupe:'epargne'},{nom:'Divers',type:'depense',groupe:'envies'}
 ];
 const RULES = [
+  // épargne en premier : « VERSEMENT ASSURANCE VIE » ne doit pas tomber dans Assurances (et « Caisse d'Épargne » n'est pas de l'épargne)
+  [/livret|\bldd[sd]?\b|\blep\b|\bpel\b|\bcel\b|\bpea\b|\bper[ico]?\b|assurance[\s-]*vie|(?<!caisse\s*d.?\s*)[ée]pargne|bourse|versement\s*programm/i,'Épargne & investissement'],
   [/salaire|paie|virement.*employeur/i,'Salaire'],[/loyer|pr[eê]t immo|syndic|credit immo/i,'Logement'],
   [/carrefour|leclerc|auchan|lidl|intermarch|monoprix|franprix|casino|aldi|super ?u|picard/i,'Alimentation'],
   [/sncf|ratp|navigo|total|esso|shell|bp |uber(?!\s*eats)|parking|p[ée]age|blablacar/i,'Transport'],
@@ -574,12 +578,13 @@ const RULES = [
   [/restaurant|resto|mcdo|burger|deliveroo|uber ?eats|caf[ée]|bar /i,'Restaurants & sorties'],
   [/amazon|fnac|zara|decathlon|ikea|darty|cdiscount/i,'Shopping'],
   [/netflix|spotify|disney|canal|deezer|prime video|cin[ée]ma|salle de sport|basic fit/i,'Loisirs & abonnements'],
-  [/airbnb|booking|h[oô]tel|air france|easyjet|ryanair/i,'Voyages'],[/livret|pea|assurance.vie|epargne|bourse/i,'Épargne & investissement']
+  [/airbnb|booking|h[oô]tel|air france|easyjet|ryanair/i,'Voyages']
 ];
 let S = blank();
 function blank(){ return {tx:[], cats:structuredClone(DEFAULT_CATS), budgets:{}, goals:[], rec:[], rules:{}, assets:[], snaps:{}, payslips:[], theme:''}; }
 const ASSET_TYPES = {
   courant:{l:'Compte courant',k:'actif',g:'Liquidités'}, livret:{l:'Livret / épargne réglementée',k:'actif',g:'Épargne sécurisée'},
+  pel:{l:'PEL / CEL (épargne bloquée)',k:'actif',g:'Épargne sécurisée'},
   av:{l:'Assurance-vie',k:'actif',g:'Placements financiers'}, pea:{l:'PEA / compte-titres',k:'actif',g:'Placements financiers'},
   retraite:{l:'Épargne retraite (PER)',k:'actif',g:'Placements financiers'}, salariale:{l:'Épargne salariale',k:'actif',g:'Placements financiers'},
   immo:{l:'Immobilier',k:'actif',g:'Immobilier'}, crypto:{l:'Crypto-actifs',k:'actif',g:'Autres actifs'}, autre:{l:'Autre actif',k:'actif',g:'Autres actifs'},
@@ -886,7 +891,9 @@ const ceil5=v=>Math.ceil(v/5)*5;
 function fixedCharges(){
   return analyze(12).rec.filter(r=>!/épargne/i.test(r.cat)).sort((a,b)=>(b.manual?1:0)-(a.manual?1:0)||b.annuel-a.annuel).map(r=>({...r,on:!S.fixedOff?.[r.key]})); }
 function fixedByCat(list){ const by={}; for(const r of list) if(r.on) by[r.cat]=(by[r.cat]||0)+r.montant; return by; }
-function applyFixedBudgets(){ const by=fixedByCat(fixedCharges()); let created=0, raised=0;
+// épargne programmée : versements réguliers vers livret, PEL, assurance-vie…
+function savingsPlans(){ return analyze(12).recSav.map(r=>({...r,on:!S.fixedOff?.[r.key]})); }
+function applyFixedBudgets(){ const by=fixedByCat([...fixedCharges(),...savingsPlans()]); let created=0, raised=0;
   for(const [c,v] of Object.entries(by)){ const need=ceil5(v), cur=S.budgets[c]||0;
     if(cur<need){ cur?raised++:created++; S.budgets[c]=need; } }
   if(created||raised) save(); return {created,raised}; }
@@ -905,20 +912,26 @@ function renderFixed(m){
       <div class="toolbar" style="margin:0"><button class="btn primary">Ajouter</button></div>
     </form></details>`;
   const restore = hidden ? `<button class="link small" id="fxRestore">Réafficher ${hidden} dépense${hidden>1?'s':''} supprimée${hidden>1?'s':''}</button>` : '';
-  if(!list.length){ el.innerHTML='<div class="empty" style="padding:16px 0">Importez au moins <b>2 mois</b> de relevés (Données → double-clic sur le logo) : les dépenses qui reviennent chaque mois apparaîtront ici. Vous pouvez aussi les ajouter vous-même.</div>'+addForm+restore; return; }
+  const sav=savingsPlans();
+  if(!list.length && !sav.length){ el.innerHTML='<div class="empty" style="padding:16px 0">Importez au moins <b>2 mois</b> de relevés (Données → double-clic sur le logo) : les dépenses qui reviennent chaque mois apparaîtront ici. Vous pouvez aussi les ajouter vous-même.</div>'+addForm+restore; return; }
   const paid=r=>S.tx.some(t=>t.type==='depense' && ym(t.date)===m && libKey(t.libelle)===r.key);
-  const on=list.filter(r=>r.on), tot=on.reduce((s,r)=>s+r.montant,0), done=on.filter(paid).reduce((s,r)=>s+r.montant,0);
-  el.innerHTML = `<div class="fx-sum"><div><b>${eur(tot)}</b><span>par mois · ${on.length} dépense${on.length>1?'s':''}</span></div>
-      <div><b class="pos">${eur(done)}</b><span>déjà payé en ${monthLabel(m).split(' ')[0]}</span></div>
-      <div><b style="color:var(--warn)">${eur(tot-done)}</b><span>reste à payer</span></div></div>
-    <div class="fx-list">${list.map(r=>{ const p=paid(r); return `<label class="fx ${r.on?'':'off'}">
+  const row=r=>{ const p=paid(r); return `<label class="fx ${r.on?'':'off'}">
       <input type="checkbox" data-fx="${esc(r.key)}" ${r.on?'checked':''}>
       <span class="av">${catIcon(r.cat)}</span>
       <span class="fx-b"><span class="fx-n">${esc(r.nom)}</span><span class="muted small">${esc(r.cat)} · vers le ${r.day} du mois${r.manual?' · <span class="tag">ajoutée</span>':''}</span></span>
-      <span class="fx-m"><b>${eur2(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ payé':'à venir'}</span></span>
-      <button type="button" class="fx-del" data-fxdel="${esc(r.key)}" title="Supprimer de mes dépenses habituelles">✕</button></label>`; }).join('')}</div>
-    <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" onclick="fillBudgets()">Remplir mes budgets avec ces dépenses</button>
-      <span class="small muted">Décochez pour ne pas compter ce mois-ci, ✕ pour supprimer.</span></div>${addForm}${restore}`;
+      <span class="fx-m"><b>${eur2(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ '+(catOf(r.cat)?.groupe==='epargne'?'versé':'payé'):'à venir'}</span></span>
+      <button type="button" class="fx-del" data-fxdel="${esc(r.key)}" title="Supprimer de mes habitudes">✕</button></label>`; };
+  const on=list.filter(r=>r.on), tot=on.reduce((s,r)=>s+r.montant,0), done=on.filter(paid).reduce((s,r)=>s+r.montant,0);
+  const sOn=sav.filter(r=>r.on), sTot=sOn.reduce((s,r)=>s+r.montant,0), sDone=sOn.filter(paid).reduce((s,r)=>s+r.montant,0);
+  el.innerHTML = (list.length?`<div class="fx-sum"><div><b>${eur(tot)}</b><span>par mois · ${on.length} dépense${on.length>1?'s':''}</span></div>
+      <div><b class="pos">${eur(done)}</b><span>déjà payé en ${monthLabel(m).split(' ')[0]}</span></div>
+      <div><b style="color:var(--warn)">${eur(tot-done)}</b><span>reste à payer</span></div></div>
+    <div class="fx-list">${list.map(row).join('')}</div>`:'')
+    + (sav.length?`<h3 class="fx-h">🐷 Mon épargne programmée <small>${eur(sTot)} / mois · ${eur(sTot*12)} / an${sDone?` · ${eur(sDone)} déjà versés ce mois`:''}</small></h3>
+    <div class="fx-list">${sav.map(row).join('')}</div>`
+    : `<p class="small muted fx-h">🐷 Aucun versement régulier vers un livret, PEL ou assurance-vie détecté. Vous pouvez en ajouter un ci-dessous (catégorie « Épargne & investissement »).</p>`)
+    + `<div class="toolbar" style="margin:12px 0 0"><button class="btn primary" onclick="fillBudgets()">Remplir mes budgets avec ces montants</button>
+      <span class="small muted">Décochez pour ne pas compter, ✕ pour supprimer.</span></div>${addForm}${restore}`;
 }
 function fillBudgets(){ const r=applyFixedBudgets();
   toast(r.created||r.raised ? `${r.created} budget${r.created>1?'s':''} créé${r.created>1?'s':''}, ${r.raised} complété${r.raised>1?'s':''} avec vos dépenses récurrentes.` : 'Vos budgets couvrent déjà toutes vos dépenses récurrentes.'); renderBudget(); }
@@ -1221,27 +1234,30 @@ $('#payBody').addEventListener('click',e=>{ const id=e.target.dataset.pdel; if(!
 let anaN=6;
 const median=a=>{ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y), h=s.length>>1; return s.length%2?s[h]:(s[h-1]+s[h])/2; };
 const r10=v=>Math.max(10,Math.round(v/10)*10);
+// Repère les opérations qui reviennent ~1 fois par mois avec un montant stable (±10 % sur au moins 60 % des mois)
+function findRecurring(list){
+  const groups={}; for(const t of list){ const k=libKey(t.libelle); if(k) (groups[k]=groups[k]||[]).push(t); }
+  const rec=[];
+  for(const [k,g] of Object.entries(groups)){ const ms=new Set(g.map(t=>ym(t.date))); if(ms.size<2 || g.length/ms.size>1.5) continue;
+    const md=median(g.map(t=>t.montant)), close=g.filter(t=>Math.abs(t.montant-md)<=Math.max(2,md*.10));
+    if(new Set(close.map(t=>ym(t.date))).size<Math.max(2,Math.ceil(ms.size*.6))) continue;
+    const last=g.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+    rec.push({key:k, nom:last.libelle||k, cat:last.categorie, montant:md, annuel:md*12, mois:ms.size, last:last.date, day:Math.round(median(g.map(t=>+t.date.slice(8)))),
+      sub:/abonnement|loisirs|télécom|énergie|assurance/i.test(last.categorie)}); }
+  return rec; }
 function analyze(n){
   const end=curMonth(), months=[...Array(n)].map((_,i)=>addMonths(end,i-n+1)), set=new Set(months);
   const tx=S.tx.filter(t=>set.has(bm(t))), deps=tx.filter(t=>t.type==='depense'&&!isSaving(t));
   const per=months.map(m=>monthTotals(m)), activeMs=months.filter((m,i)=>per[i].rev||per[i].dep||per[i].ep), active=activeMs.length||1;
   const sum=k=>per.reduce((s,p)=>s+p[k],0), avg={rev:sum('rev')/active,dep:sum('dep')/active,ep:sum('ep')/active};
   avg.rate=avg.rev?(avg.rev-avg.dep)/avg.rev:0;
-  // 1) prélèvements et abonnements récurrents : même libellé, ~1 fois par mois, montant stable (±15 %)
-  const groups={}; for(const t of deps){ const k=libKey(t.libelle); if(k) (groups[k]=groups[k]||[]).push(t); }
-  const rec=[];
-  for(const [k,g] of Object.entries(groups)){ const ms=new Set(g.map(t=>ym(t.date))); if(ms.size<2 || g.length/ms.size>1.5) continue;
-    // montant stable (±10 %) sur au moins 60 % des mois où elle apparaît : sinon c'est une dépense courante variable
-    const md=median(g.map(t=>t.montant)), close=g.filter(t=>Math.abs(t.montant-md)<=Math.max(2,md*.10));
-    if(new Set(close.map(t=>ym(t.date))).size<Math.max(2,Math.ceil(ms.size*.6))) continue;
-    const last=g.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
-    rec.push({key:k, nom:last.libelle||k, cat:last.categorie, montant:md, annuel:md*12, mois:ms.size, last:last.date, day:Math.round(median(g.map(t=>+t.date.slice(8)))),
-      sub:/abonnement|loisirs|télécom|énergie|assurance/i.test(last.categorie)}); }
-  // vos choix priment : dépenses supprimées retirées, dépenses ajoutées à la main incluses
+  // 1) dépenses récurrentes (rec) et épargne programmée (recSav) : même libellé, ~1 fois par mois, montant stable
+  const rec=findRecurring(deps), recSav=findRecurring(tx.filter(isSaving));
+  // vos choix priment : éléments supprimés retirés, éléments ajoutés à la main inclus (l'épargne va dans recSav)
   const man=(S.fixedManual||[]).map(x=>({...x,annuel:x.montant*12,manual:true,sub:/abonnement|loisirs|télécom|énergie|assurance/i.test(x.cat)})), mk=new Set(man.map(x=>x.key));
-  for(let i=rec.length-1;i>=0;i--) if(S.fixedHidden?.[rec[i].key] || mk.has(rec[i].key)) rec.splice(i,1);
-  rec.push(...man);
-  rec.sort((a,b)=>b.annuel-a.annuel);
+  for(const L of [rec,recSav]) for(let i=L.length-1;i>=0;i--) if(S.fixedHidden?.[L[i].key] || mk.has(L[i].key)) L.splice(i,1);
+  for(const x of man) (catOf(x.cat)?.groupe==='epargne'?recSav:rec).push(x);
+  rec.sort((a,b)=>b.annuel-a.annuel); recSav.sort((a,b)=>b.annuel-a.annuel);
   // 2) plus grosses dépenses
   const top=deps.slice().sort((a,b)=>b.montant-a.montant).slice(0,5);
   // 3) évolution par catégorie : dernier mois complet vs moyenne des mois précédents
@@ -1259,7 +1275,7 @@ function analyze(n){
   const feesY=fees.reduce((s,t)=>s+t.montant,0)/active*12;
   const small=deps.filter(t=>t.montant<15 && catOf(t.categorie)?.groupe==='envies'), smallM=small.reduce((s,t)=>s+t.montant,0)/active;
   const grp={besoins:0,envies:0}; for(const t of deps) grp[catOf(t.categorie)?.groupe==='besoins'?'besoins':'envies']+=t.montant/active;
-  return {n,end,months,active,avg,rec,top,ref,before,evo,odd,feesY,feesN:fees.length,small:small.length/active,smallM,grp,count:tx.length};
+  return {n,end,months,active,avg,rec,recSav,top,ref,before,evo,odd,feesY,feesN:fees.length,small:small.length/active,smallM,grp,count:tx.length};
 }
 // Conseils simples, concrets et chiffrés (gain = économie ou épargne annuelle estimée).
 // Chaque conseil a un détail dépliable (more), une action (act) et une animation d'émoticône (an).
@@ -1344,6 +1360,10 @@ function buildTips(a){
       txt:`En plaçant chaque mois vos ${eur(margin)} d'excédent à 3 % par an.`,
       more:`<div class="dd-tbl">${[1,3,5,10,20].map(n=>`<div class="row small"><span>Dans ${n} an${n>1?'s':''}</span><span>versé ${eur(margin*12*n)} · <b class="pos">${eur(fv(n))}</b></span></div>`).join('')}</div><p class="small muted">Hypothèse de 3 % par an, hors frais et impôts ; à titre indicatif.</p>`,
       act:{label:'Faire mes simulations',sim:Math.round(margin)}}); }
+  // épargne programmée détectée sur les relevés : ajoutée au détail du conseil d'épargne
+  const st=T.find(t=>['🐷','🏆'].includes(t.ic));
+  if(st && a.recSav?.length){ const tot=a.recSav.reduce((s,r)=>s+r.montant,0);
+    st.more=`<div class="small" style="margin-bottom:6px"><b>🐷 Votre épargne programmée : ${eur(tot)} / mois</b></div><div class="dd-ops">${a.recSav.map(r=>`<div class="row small"><span>${esc(r.nom)}</span><b>${eur2(r.montant)} / mois</b></div>`).join('')}</div>`+(st.more||''); }
   return T;
 }
 // actions des conseils (délégation de clic sur l'écran Analyse)
@@ -1459,7 +1479,7 @@ function importBank(inp){ const f=inp.files[0]; if(!f) return; inp.value='';
     if(new TextDecoder('ascii').decode(buf.slice(0,5))==='%PDF-'){
       $('#csvMsg').textContent='Lecture du relevé PDF…';
       try{ const lines=await pdfLines(buf), rows=parseStatement(lines);
-        IMP={kind:'PDF',rows,file:f.name,note: rows.length?'':(lines.join('').replace(/[^a-zà-ÿ]/gi,'').length>80
+        IMP={kind:'PDF',rows,savings:rows.savings||[],file:f.name,note: rows.length||rows.savings?.length?'':(lines.join('').replace(/[^a-zà-ÿ]/gi,'').length>80
           ? 'Aucune opération reconnue dans ce relevé. Essayez l\'export CSV ou OFX de votre banque, ou envoyez-moi la disposition des colonnes pour que j\'adapte la lecture.'
           : 'Ce PDF ne contient pas de texte lisible (relevé scanné). Utilisez l\'export CSV ou OFX de votre banque.')};
         $('#csvMsg').textContent=''; showImport(); }
@@ -1473,6 +1493,7 @@ function importBank(inp){ const f=inp.files[0]; if(!f) return; inp.value='';
     IMP.file=f.name; showImport(); }); }
 /* Relevé de compte PDF : lignes « date  [date valeur]  libellé  montant(s) », colonnes Débit / Crédit repérées par leur position */
 const DATE_TOKEN=/\b(\d{2})[\/.](\d{2})(?:[\/.](\d{2,4}))?\b/g;
+const SAV_ACC=/livret\s*a\b|livret\s*(?:jeune|bleu|d[ée]veloppement|d.?[ée]pargne)|\bldd[sd]?\b|\blep\b|\bpel\b|\bcel\b|compte\s*(?:sur\s*)?livret|compte\s*d.?\s*[ée]pargne|assurance[\s-]*vie|\bpea\b|\bper[ico]?\b|plan\s*d.?\s*[ée]pargne/i;
 function parseStatement(lines){
   const geo=lines.geo||[], txt=lines.join('\n'), rows=[];
   const xAt=(i,idx)=>{ const g=geo[i]; if(!g) return null; let x=null; for(const s of g) if(s.start<=idx) x=s.x; return x; };
@@ -1485,7 +1506,7 @@ function parseStatement(lines){
   const fullDate=(d,mo,y)=>{ if(y) return `${Y(y)}-${mo}-${d}`;
     if(pEnd){ let yy=+pEnd.slice(0,4); if(+mo>+pEnd.slice(5)) yy--; return `${yy}-${mo}-${d}`; }
     return `${anyYear}-${mo}-${d}`; };
-  let cols=null, cur=null, cont=0;
+  let cols=null, cur=null, cont=0; const savings=[];
   for(let i=0;i<lines.length;i++){
     const l=lines[i], sg=segs(i);
     // en-tête de tableau (répété à chaque page)
@@ -1510,13 +1531,24 @@ function parseStatement(lines){
       if(cols?.deb!=null && a.x!=null) credit = Math.abs(a.x-cols.cred) < Math.abs(a.x-cols.deb);
       else if(a.neg) credit=false;
       else if(cols?.signed) credit=true;
-      else credit=/vir(?:ement)?\s*(?:sepa\s*)?(?:re[çc]u|de|inst.*re[çc]u)|salaire|paie|remboursement|versement|avoir|prestation|caf\b/i.test(lib);
+      else credit=/vir(?:ement)?\s*(?:sepa\s*)?(?:re[çc]u|de|inst.*re[çc]u)|salaire|paie|remboursement|versement(?!.*(?:livret|assurance|pea|pel|[ée]pargne|programm))|avoir|prestation|caf\b/i.test(lib);
       cur={date:fullDate(m[1],m[2],m[3]), v:credit?a.v:-a.v, lib}; rows.push(cur); cont=0; continue; }
+    // encadré « Vos comptes d'épargne » : nom du compte + solde (ligne sans date en tête)
+    if(SAV_ACC.test(l)){ const masked=l.replace(DATE_TOKEN,s=>' '.repeat(s.length)), am=amountsIn(masked).filter(a=>!a.pct);
+      if(am.length){ const last=am[am.length-1], raw=masked.slice(last.i).match(AMT)?.[0]||'';
+        const nom=masked.slice(0,am[0].i).replace(/n[°o]\s*\S+|\*+\d*|x{3,}\d*|\b\d{5,}\b/gi,' ').replace(/\b(solde|au|disponible|cr[ée]diteur|valeur)\b.*$/i,'').replace(/[\s:–-]+$/,'').replace(/\s+/g,' ').trim();
+        if(nom.length>=3) savings.push({nom, solde:/-$/.test(raw.trim())?-last.v:last.v});
+        cur=null; continue; } }
     // ligne de suite du libellé (sans date ni montant)
-    if(cur && cont<2 && !amountsIn(l).length && /[a-z]/i.test(l) && l.length<90 && !/page\s*\d|solde|total|suite|iban|bic/i.test(l)){ cur.lib=(cur.lib+' '+l.trim()).trim(); cont++; }
+    if(cur && cont<2 && !amountsIn(l).length && /[a-z]/i.test(l) && l.length<90 && !/page\s*\d|solde|total|suite|iban|bic|vos\s*comptes|comptes?\s*d.?\s*[ée]pargne|synth[eè]se|r[ée]capitul/i.test(l)){ cur.lib=(cur.lib+' '+l.trim()).trim(); cont++; }
     else if(amountsIn(l).length) cur=null;
   }
-  return rows.filter(r=>r.v && r.date && !isNaN(new Date(r.date)));
+  const out=rows.filter(r=>r.v && r.date && !isNaN(new Date(r.date)));
+  // mois du solde : fin de période du relevé, sinon mois de la dernière opération
+  const sm=pEnd || (out.length?ym(out.map(r=>r.date).sort().at(-1)):ym(new Date().toISOString())), seen={};
+  for(const s of savings) seen[normName(s.nom)]={...s,mois:sm,on:true};
+  out.savings=Object.values(seen);
+  return out;
 }
 function parseOFX(t){ const out=[];
   for(const b of t.split(/<STMTTRN>/i).slice(1)){ const g=tag=>{ const m=b.match(new RegExp('<'+tag+'>([^<\\r\\n]*)','i')); return m?m[1].trim():''; };
@@ -1565,16 +1597,32 @@ function showImport(){
     ${IMP.rows.length?`<div class="tblwrap" style="max-height:260px;overflow:auto"><table class="small"><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie devinée</th><th class="num">Montant</th></tr></thead><tbody>
       ${IMP.rows.slice(0,50).map(r=>`<tr style="${r.dup?'opacity:.45':''}"><td>${r.date.split('-').reverse().join('/')}</td><td>${esc(r.lib)}</td><td>${esc(r.cat)}${r.dup?' <span class="tag">doublon</span>':''}</td><td class="num ${r.v>0?'pos':''}">${r.v>0?'+':'−'}${eur2(r.montant)}</td></tr>`).join('')}
       </tbody></table></div>`:`<p class="neg small">${IMP.note?esc(IMP.note):'Aucune opération reconnue : ajustez les colonnes ci-dessus.'}</p>`}
-    <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" ${fresh.length?'':'disabled'} onclick="commitImport()">Importer ${fresh.length} opération(s)</button></div></div>`;
+    ${IMP.savings?.length?`<div class="imp-sav"><b>🐷 Comptes d'épargne trouvés sur le relevé</b> <span class="small muted">→ mis à jour dans Patrimoine (solde de ${monthLabel(IMP.savings[0].mois)})</span>
+      ${IMP.savings.map((s,i)=>{ const ex=S.assets.find(a=>normName(a.nom)===normName(s.nom)); return `<label class="fx"><input type="checkbox" data-sav="${i}" ${s.on?'checked':''}>
+        <span class="av">🐷</span><span class="fx-b"><span class="fx-n">${esc(s.nom)}</span><span class="small muted">${ex?`déjà suivi · ${eur(assetVal(ex,s.mois))} avant`:'nouveau compte'}</span></span>
+        <span class="fx-m"><b>${eur2(s.solde)}</b></span></label>`; }).join('')}</div>`:''}
+    <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" ${fresh.length||IMP.savings?.some(s=>s.on)?'':'disabled'} onclick="commitImport()">Importer ${fresh.length} opération(s)${IMP.savings?.some(s=>s.on)?` et ${IMP.savings.filter(s=>s.on).length} solde(s) d'épargne`:''}</button></div></div>`;
 }
-$('#impBox').addEventListener('change',e=>{ const k=e.target.dataset.map; if(k){ IMP.csv.map[k]=+e.target.value; showImport(); } });
+$('#impBox').addEventListener('change',e=>{ const k=e.target.dataset.map; if(k){ IMP.csv.map[k]=+e.target.value; showImport(); }
+  const s=e.target.dataset.sav; if(s!=null){ IMP.savings[+s].on=e.target.checked; showImport(); } });
 function commitImport(){ const fresh=IMP.rows.filter(r=>!r.dup);
   for(const r of fresh) S.tx.push({id:uid(),date:r.date,type:r.type,montant:r.montant,categorie:r.cat,libelle:r.lib,...(r.fitid?{fitid:r.fitid}:{})});
   const fb = S.autoBudget!==false ? applyFixedBudgets() : {created:0,raised:0};
+  const sv = applySavingsBalances();
   save(); IMP=null; showImport(); render();
   $('#csvMsg').innerHTML=`<span class="pos">${fresh.length} opération(s) importée(s).</span>`
     + (fb.created||fb.raised ? ` Budgets mis à jour avec vos dépenses récurrentes : ${fb.created} créé(s), ${fb.raised} complété(s).` : '')
+    + (sv ? ` 🐷 ${sv} compte${sv>1?'s':''} d'épargne mis à jour dans Patrimoine.` : '')
     + ` Corrigez les catégories dans l'onglet Opérations : l'application retient vos corrections pour les prochains imports.`; }
+/* Soldes des comptes d'épargne lus sur le relevé → Patrimoine (un solde par compte et par mois) */
+function savingsType(nom){ return /assurance[\s-]*vie/i.test(nom)?'av' : /\bpel\b|\bcel\b|plan\s*d.?\s*[ée]pargne\s*logement/i.test(nom)?'pel' : /\bpea\b|titres/i.test(nom)?'pea' : /\bper[ico]?\b|retraite/i.test(nom)?'retraite' : 'livret'; }
+const normName=s=>String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9]+/g,' ').trim();
+function applySavingsBalances(){
+  const L=(IMP?.savings||[]).filter(s=>s.on); let n=0;
+  for(const s of L){ let a=S.assets.find(x=>normName(x.nom)===normName(s.nom));
+    if(!a){ a={id:uid(),nom:s.nom,type:savingsType(s.nom)}; S.assets.push(a); }
+    S.snaps[a.id]=S.snaps[a.id]||{}; S.snaps[a.id][s.mois]=s.solde; n++; }
+  return n; }
 function resetAll(){ if(confirm('Effacer définitivement toutes les données ? Pensez à exporter une sauvegarde avant.')){ S=blank(); save(); render(); } }
 function loadDemo(){
   if(S.tx.length && !confirm('Ajouter des données de démonstration à vos données existantes ?')) return;
