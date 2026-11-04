@@ -478,6 +478,18 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
   </div>
 </section>
 
+<!-- ÉPARGNE -->
+<section id="v-savings" class="hide">
+  <h2 style="margin:0 0 14px;font-size:20px">🐷 Mon épargne</h2>
+  <div class="grid g4" id="svKpis"></div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h2>Versements du mois <small id="svMonth"></small></h2><div id="svOps"></div></div>
+    <div class="card"><h2>Épargne programmée <small>versements réguliers détectés</small></h2><div id="svProg"></div></div>
+  </div>
+  <div class="card" style="margin-top:16px"><h2>Mes comptes d'épargne <small>soldes lus sur vos relevés ou saisis dans Patrimoine</small></h2><div id="svAcc"></div></div>
+  <div class="card" style="margin-top:16px"><h2>Épargne mois par mois <small>12 derniers mois</small></h2><div id="chSv"></div></div>
+</section>
+
 <!-- ANALYSE -->
 <section id="v-analysis" class="hide">
   <div class="toolbar">
@@ -659,7 +671,15 @@ document.getElementById('lockForm').onsubmit=async e=>{
 document.getElementById('forgot').onclick=()=>{
   if(confirm('Sans le code, vos données chiffrées ne peuvent pas être récupérées.\n\nEffacer toutes les données de cet appareil et recommencer ? (Vous pourrez restaurer une sauvegarde si vous connaissez son code.)')
      && confirm('Confirmez-vous l\'effacement définitif ?')){ localStorage.removeItem(KEY_ENC); showLock(); } };
-function unlocked(){ $('#lock').classList.add('hide'); applyTheme(); applyRecurring(); render(); }
+function unlocked(){ $('#lock').classList.add('hide'); applyTheme(); applyRecurring(); migrateSavings(); render(); }
+/* Reclasse en « Épargne » les versements vers livret / assurance-vie / PEA… importés avant la règle d'épargne.
+   Les catégories que vous avez corrigées vous-même (règles apprises) ne sont pas touchées. */
+function migrateSavings(){
+  const re=RULES[0][0]; let n=0;
+  for(const t of S.tx){ if(t.type!=='depense' || isSaving(t) || !re.test(t.libelle||'')) continue;
+    if(S.rules[libKey(t.libelle)]) continue; t.categorie='Épargne & investissement'; n++; }
+  if(n){ save(); setTimeout(()=>toast(`🐷 ${n} versement${n>1?'s':''} vers l'épargne reclassé${n>1?'s':''} en « Épargne & investissement ».`),600); }
+}
 async function lockNow(){ await saving; CK=null; S=blank(); location.reload(); }
 let hiddenAt=0;
 document.addEventListener('visibilitychange',()=>{ if(document.hidden) hiddenAt=Date.now(); else if(CK && Date.now()-hiddenAt>5*60*1000) lockNow(); });
@@ -823,6 +843,8 @@ function renderTiles(m,t){
     {v:'budget',ic:'🎯',t:'Budgets',val:buds.length?`${buds.length-over}/${buds.length}`:'—',unit:buds.length?' respectés':'',sub:buds.length?(over?`<span class="neg">${over} dépassé${over>1?'s':''}</span>`:'<span class="pos">Tout est sous contrôle</span>'):'Fixez vos plafonds mensuels',bar:buds.length?(buds.length-over)/buds.length:null},
     {v:'goals',ic:'🏁',t:'Objectifs',val:S.goals.length?Math.round(gA/gT*100)+' %':'—',unit:S.goals.length?' atteint':'',sub:S.goals.length?`${S.goals.length} objectif${S.goals.length>1?'s':''} · ${eur(gA)} sur ${eur(gT)}`:'Épargne de précaution, projet…',bar:S.goals.length?gA/gT:null},
     {v:'pay',ic:'💼',t:'Salaire',val:ps?eur(ps.net):'—',unit:'',sub:ps?`Net · ${monthLabel(ps.mois)}`:'Ajoutez votre bulletin du mois'},
+    (()=>{ const sv=savingsSummary(m); return {v:'savings',ic:'🐷',t:'Épargne',val:eur(sv.month),unit:' ce mois',
+      sub:sv.prog||sv.accounts?`${sv.prog?`${eur(sv.prog)} / mois programmés`:''}${sv.prog&&sv.accounts?' · ':''}${sv.accounts?`${eur(sv.accounts)} sur vos comptes`:''}`:'Versements, épargne programmée, comptes'}; })(),
     {v:'wealth',ic:'🏦',t:'Patrimoine',val:w?eur(w.net):'—',unit:'',sub:w?`<span class="${w.net>=wp.net?'pos':'neg'}">${w.net>=wp.net?'+':''}${eur(w.net-wp.net)}</span> sur 1 mois`:'Comptes, livrets, placements, crédits'},
     {v:'sim',ic:'📈',t:'Simulateur',val:'',unit:'',sub:'Projetez votre épargne avec les intérêts composés'},
   ]; // « Données » n'a pas de carte : accès par double-clic / double-tap sur le logo, depuis l'accueil
@@ -1011,6 +1033,31 @@ $('#diversList').addEventListener('click',e=>{ const b=e.target.closest('[data-d
   S.diversLines=S.diversLines.filter(x=>x!==l); save(); renderBudget(); });
 $('#diversList').addEventListener('submit',e=>{ if(e.target.id!=='dvForm') return; e.preventDefault(); const f=e.target;
   S.diversLines=S.diversLines||[]; S.diversLines.push({id:uid(),nom:f.nom.value.trim(),montant:+f.montant.value}); save(); renderBudget(); toast('Ligne ajoutée à l\'enveloppe Divers 📦'); });
+
+/* ---------- Écran Épargne : tout ce qui concerne l'épargne au même endroit ---------- */
+const SAVING_TYPES=['livret','pel','av','pea','retraite','salariale'];
+function savingsSummary(m){
+  const ops=S.tx.filter(t=>isSaving(t) && bm(t)===m), month=ops.reduce((s,t)=>s+t.montant,0);
+  const prog=savingsPlans().filter(r=>r.on).reduce((s,r)=>s+r.montant,0);
+  const accs=S.assets.filter(a=>SAVING_TYPES.includes(a.type)), accounts=accs.reduce((s,a)=>s+assetVal(a,m),0);
+  return {ops,month,prog,accs,accounts}; }
+function renderSavings(){
+  const m=curMonth(), s=savingsSummary(m), p=savingPossible(m);
+  $('#svMonth').textContent=monthLabel(m);
+  $('#svKpis').innerHTML=[['Épargné ce mois',eur(s.month),`${s.ops.length} versement${s.ops.length>1?'s':''}`],
+    ['Épargne possible',p.rev?eur(p.possible):'—',p.rev?(s.month>=p.possible?'objectif atteint ✓':`encore ${eur(Math.max(0,p.possible-s.month))}`):'revenus du mois non saisis'],
+    ['Programmée',eur(s.prog),'par mois'],['Sur vos comptes',eur(s.accounts),`${s.accs.length} compte${s.accs.length>1?'s':''} d'épargne`]]
+    .map(([l,v,x])=>`<div class="card kpi"><div class="lbl">${l}</div><div class="val">${v}</div><div class="sub">${x}</div></div>`).join('');
+  $('#svOps').innerHTML = s.ops.length ? s.ops.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span class="lib"><span class="av">🐷</span><span>${esc(t.libelle||t.categorie)}<br><span class="muted">${t.date.split('-').reverse().join('/')}</span></span></span><b class="amt pos">+${eur2(t.montant)}</b></div>`).join('')
+    : `<div class="empty">Aucun versement vers l'épargne en ${monthLabel(m)}.<br><span class="small">Un virement vers votre livret ou assurance-vie doit être classé en « Épargne & investissement » (onglet Opérations).</span></div>`;
+  const pl=savingsPlans();
+  $('#svProg').innerHTML = pl.length ? pl.map(r=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(r.nom)}<br><span class="muted">vers le ${r.day} du mois${r.manual?' · ajoutée':''}${r.on?'':' · décochée'}</span></span><b>${eur2(r.montant)} / mois</b></div>`).join('')
+    : '<div class="empty">Aucun versement régulier détecté (il faut au moins 2 mois de relevés).<br><span class="small">Vous pouvez en ajouter un dans Budgets → « Ajouter une dépense habituelle », catégorie Épargne.</span></div>';
+  $('#svAcc').innerHTML = s.accs.length ? s.accs.map(a=>{ const v=assetVal(a,m), pv=assetVal(a,addMonths(m,-1)); return `<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(a.nom)}<br><span class="muted">${ASSET_TYPES[a.type]?.l||''}</span></span><span style="text-align:right"><b>${eur2(v)}</b><br><span class="${v>=pv?'pos':'neg'}">${v-pv?(v>pv?'+':'')+eur(v-pv)+' sur 1 mois':''}</span></span></div>`; }).join('')
+    : '<div class="empty">Aucun compte d\'épargne suivi.<br><span class="small">Importez un relevé qui affiche vos comptes d\'épargne, ou ajoutez-les dans Patrimoine.</span></div>';
+  const ms=[...Array(12)].map((_,i)=>addMonths(m,i-11));
+  barChart($('#chSv'), ms.map(x=>monthLabel(x,true)), [{name:'Épargné',color:'var(--s3)',values:ms.map(x=>monthTotals(x).ep)}]);
+}
 
 /* ---------- Épargne possible du mois = revenus − dépenses habituelles cochées − enveloppe Divers ---------- */
 function savingPossible(m){
@@ -1749,7 +1796,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await saving; location.reload(); }
 $('#month').value=month; $('#month').onchange=e=>{ if(e.target.value){ month=e.target.value; render(); } };
-function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,analysis:renderAnalysis,sim:renderSim,settings:renderSettings})[view](); }
+function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,savings:renderSavings,analysis:renderAnalysis,sim:renderSim,settings:renderSettings})[view](); }
 let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(render,150); });
 $('#txForm').date.value=new Date().toISOString().slice(0,10);
 showLock();
