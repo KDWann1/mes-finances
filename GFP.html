@@ -215,7 +215,8 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .h2-row{border-bottom:1px solid rgba(255,255,255,.14);font-size:15px} .h2-row b{font-variant-numeric:tabular-nums;white-space:nowrap}
 .h2-total span{font-weight:600;font-size:15px} .h2-total b{font-size:30px;font-weight:750;letter-spacing:-.02em;font-variant-numeric:tabular-nums;white-space:nowrap}
 .h2-bar{display:flex;gap:2px;height:12px;border-radius:6px;overflow:hidden;margin:14px 0 6px;position:relative;z-index:1}
-.h2-bar i{display:block;height:100%} .b-dep{background:rgba(255,255,255,.92)} .b-ep{background:#8ff0c0} .b-rest{background:rgba(255,255,255,.28)}
+.h2-bar i{display:block;height:100%} .b-fix{background:#ffd27a} .b-div{background:#ffb3c7} .b-dep{background:rgba(255,255,255,.92)} .b-ep{background:#8ff0c0} .b-rest{background:rgba(255,255,255,.28)}
+.h2-row small{opacity:.75;font-size:12px} .h2-neg{color:#ffd0d0}
 .h2-legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;opacity:.9;position:relative;z-index:1}
 .h2-legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
 .h2-msg{margin-top:12px;font-size:14px;line-height:1.45;position:relative;z-index:1}
@@ -822,34 +823,34 @@ function renderDash(){
   const m=curMonth(), t=monthTotals(m), prev=monthTotals(addMonths(m,-1));
   const rate = t.rev>0 ? (t.rev-t.dep)/t.rev : 0;
   const delta = (a,b) => b ? `${a>=b?'+':'−'}${Math.abs(Math.round((a-b)/b*100))} % vs mois précédent` : '—';
-  // carte du mois, en langage simple : entré − dépensé − mis de côté = il me reste ; une barre ; une phrase de bilan
+  // carte du mois = même logique que l'épargne : salaire − dépenses habituelles − enveloppe Divers − autres dépenses − épargne = il me reste
   monthHint($('#dashHint'),m);
-  const mm=monthLabel(m).split(' ')[0], pm=monthLabel(addMonths(m,-1)).split(' ')[0], has=t.rev||t.dep||t.ep;
+  const mm=monthLabel(m).split(' ')[0], pm=monthLabel(addMonths(m,-1)).split(' ')[0], P=monthPlan(m), has=P.sal||t.dep||t.ep;
   const per = shiftDay() ? `du ${shiftDay()} ${pm} au ${shiftDay()-1} ${mm}` : '';
-  const kept = t.rev ? Math.round((t.rev-t.dep)/t.rev*100) : null;            // part de ce qui est entré non dépensée
-  const base100=Math.max(t.rev, t.dep+t.ep, 1), pDep=Math.min(100,t.dep/base100*100), pEp=Math.min(100-pDep,t.ep/base100*100), pRest=Math.max(0,100-pDep-pEp);
-  const sp=savingPossible(m), more=sp.rev ? Math.round(sp.possible-t.ep) : null;
+  const B=Math.max(P.sal, P.fixed+P.div+P.other+P.ep, 1), pc=v=>Math.max(0,Math.min(100,v/B*100));
+  const seg=[['b-fix',pc(P.fixed),'habituelles'],['b-div',pc(P.div),'Divers'],['b-dep',pc(P.other),'autres dépenses'],['b-ep',pc(P.ep),'mis de côté']];
+  const used=seg.reduce((s,x)=>s+x[1],0), pRest=Math.max(0,100-used);
   let verdict;
   if(!has) verdict=`Aucune opération en ${monthLabel(m)}. <button class="hero-link" onclick="quickAdd()">Ajouter une opération</button>`;
-  else if(!t.rev) verdict='Aucune rentrée d\'argent enregistrée pour ce mois.';
-  else if(t.solde<0) verdict=`⚠️ Vous avez dépensé plus que ce qui est entré ce mois-ci.`;
-  else if(kept>=20) verdict=`👍 Bien joué : vous gardez <b>${kept} %</b> de ce qui est entré (objectif : 20 %).`;
-  else verdict=`Vous gardez <b>${kept} %</b> de ce qui est entré. L'objectif est de garder au moins 20 %.`;
-  if(has && prev.dep && t.dep){ const d=Math.round((t.dep-prev.dep)/prev.dep*100);
-    if(Math.abs(d)>=5) verdict+=`<br>${d<0?'📉':'📈'} Vous avez dépensé <b>${Math.abs(d)} % ${d<0?'de moins':'de plus'}</b> qu'en ${pm}.`; }
+  else if(!P.sal) verdict='Aucun salaire trouvé pour ce mois : importez votre relevé ou saisissez-le dans l\'onglet Salaire.';
+  else if(P.rest<0) verdict=`⚠️ Vos charges et dépenses dépassent votre salaire de <b>${eur(-P.rest)}</b> ce mois-ci.`;
+  else verdict=`👍 Une fois vos charges habituelles et votre enveloppe Divers prévues, il vous reste <b>${eur(P.rest)}</b> pour finir le mois. Mettez-en une partie de côté.`;
+  if(has && P.fixedLeft>0) verdict+=`<br>📅 Encore <b>${eur(P.fixedLeft)}</b> de dépenses habituelles à venir ce mois-ci (déjà comptées).`;
   $('#kpis').innerHTML = `<div class="hero hero2">
     <div class="h2-top"><span class="h2-title">Mon mois de ${monthLabel(m)}</span>${per?`<span class="h2-per">${per}</span>`:''}</div>
     ${has?`<div class="h2-rows">
-      <div class="h2-row"><span>💶 Ce qui est entré</span><b>+ ${eur(t.rev)}</b></div>
-      <div class="h2-row"><span>🛒 Ce que j'ai dépensé</span><b>− ${eur(t.dep)}</b></div>
-      <div class="h2-row"><span>🐷 Ce que j'ai mis de côté</span><b>− ${eur(t.ep)}</b></div>
-      <div class="h2-total"><span>Il me reste</span><b>${eur(t.solde)}</b></div>
+      <div class="h2-row"><span>💶 Mon salaire</span><b>+ ${eur(P.sal)}</b></div>
+      <div class="h2-row"><span>🏠 Dépenses habituelles <small>(${P.nFixed})</small></span><b>− ${eur(P.fixed)}</b></div>
+      <div class="h2-row"><span>📦 Enveloppe Divers</span><b>− ${eur(P.div)}</b></div>
+      <div class="h2-row"><span>🛒 Autres dépenses du mois</span><b>− ${eur(P.other)}</b></div>
+      <div class="h2-row"><span>🐷 Déjà mis de côté</span><b>− ${eur(P.ep)}</b></div>
+      <div class="h2-total"><span>Il me reste</span><b class="${P.rest<0?'h2-neg':''}">${eur(P.rest)}</b></div>
     </div>
-    ${t.rev?`<div class="h2-bar" role="img" aria-label="Répartition de ce qui est entré : ${Math.round(pDep)} % dépensé, ${Math.round(pEp)} % mis de côté, ${Math.round(pRest)} % restant">
-      <i class="b-dep" style="width:${pDep}%"></i><i class="b-ep" style="width:${pEp}%"></i><i class="b-rest" style="width:${pRest}%"></i></div>
-    <div class="h2-legend"><span><i class="b-dep"></i>dépensé ${Math.round(pDep)} %</span><span><i class="b-ep"></i>mis de côté ${Math.round(pEp)} %</span><span><i class="b-rest"></i>reste ${Math.round(pRest)} %</span></div>`:''}`:''}
+    ${P.sal?`<div class="h2-bar" role="img" aria-label="Répartition du salaire : ${seg.map(x=>`${x[2]} ${Math.round(x[1])} %`).join(', ')}, reste ${Math.round(pRest)} %">
+      ${seg.map(x=>`<i class="${x[0]}" style="width:${x[1]}%"></i>`).join('')}<i class="b-rest" style="width:${pRest}%"></i></div>
+    <div class="h2-legend">${seg.filter(x=>x[1]>=.5).map(x=>`<span><i class="${x[0]}"></i>${x[2]} ${Math.round(x[1])} %</span>`).join('')}<span><i class="b-rest"></i>reste ${Math.round(pRest)} %</span></div>`:''}`:''}
     <div class="h2-msg">${verdict}</div>
-    ${more!=null?`<button class="h2-cta" onclick="go('budget')"><span class="t">${more>0?`💰 Je peux encore mettre de côté <b>${eur(more)}</b> ce mois-ci`:'✅ Objectif d\'épargne du mois atteint'}</span><span class="chev">›</span></button>`:''}
+    ${has?`<button class="h2-cta" onclick="go('budget')"><span class="t">🔎 Voir le détail dans Budgets</span><span class="chev">›</span></button>`:''}
   </div>`;
 
   const months=[...Array(6)].map((_,i)=>addMonths(m,i-5));
@@ -1128,6 +1129,20 @@ function renderSavings(){
 
 /* ---------- Épargne possible du mois = salaire − dépenses habituelles cochées − enveloppe Divers ----------
    (le salaire, et non la somme de toutes les rentrées d'argent : voir salaryBase) */
+/* Plan du mois (carte bleue de l'accueil) — même base que l'épargne possible :
+   salaire − dépenses habituelles cochées (prévues, payées ou à venir) − enveloppe Divers
+   − autres dépenses réelles du mois (hors habituelles ; Divers seulement au-delà de l'enveloppe) − épargne versée = il me reste */
+function monthPlan(m){
+  const sal=salaryBase(m).amount, fx=fixedCharges().filter(r=>r.on), keys=new Set(fx.map(r=>r.key));
+  const deps=S.tx.filter(t=>t.type==='depense' && ym(t.date)===m && !isSaving(t) && !isInt(t));
+  const paid=r=>deps.some(t=>libKey(t.libelle)===r.key);
+  const fixed=fx.reduce((s,r)=>s+r.montant,0), fixedLeft=fx.filter(r=>!paid(r)).reduce((s,r)=>s+r.montant,0);
+  const div=diversTotal(m), notFixed=deps.filter(t=>!keys.has(libKey(t.libelle)));
+  const divSpent=notFixed.filter(t=>t.categorie==='Divers').reduce((s,t)=>s+t.montant,0);
+  const other=notFixed.filter(t=>t.categorie!=='Divers').reduce((s,t)=>s+t.montant,0)+Math.max(0,divSpent-div);
+  const ep=S.tx.filter(t=>isSaving(t) && ym(t.date)===m).reduce((s,t)=>s+t.montant,0);
+  const r2=v=>Math.round(v*100)/100;
+  return {sal, fixed:r2(fixed), nFixed:fx.length, fixedLeft:r2(fixedLeft), div, other:r2(other), ep:r2(ep), rest:r2(sal-fixed-div-other-ep)}; }
 function savingPossible(m){
   const sb=salaryBase(m), rev=sb.amount, fx=fixedCharges().filter(r=>r.on), fixed=fx.reduce((s,r)=>s+r.montant,0), div=diversTotal(m);
   return {rev,revInfo:sb.info,fixed,n:fx.length,div,possible:rev-fixed-div}; }
@@ -1940,7 +1955,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await forceUpdate(); }
 /* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
-const APP_V=26;
+const APP_V=27;
 document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
 // Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
 async function forceUpdate(){
