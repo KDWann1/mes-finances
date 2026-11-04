@@ -333,6 +333,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
   <button class="btn primary" id="lockBtn">Déverrouiller</button>
   <p id="lockMsg" class="small neg"></p>
   <button type="button" class="link small" id="forgot">Code oublié ?</button>
+  <p class="small muted" style="margin:10px 0 0">Version <b class="appv"></b> · <button type="button" class="link small" onclick="forceUpdate()">Rechercher une mise à jour</button></p>
 </form></div>
 <header><div class="hwrap">
   <h1><span class="logo"><svg viewBox="0 0 16 16" fill="#fff"><rect x="2.5" y="9" width="2.6" height="4.5" rx="1"/><rect x="6.7" y="6" width="2.6" height="7.5" rx="1"/><rect x="10.9" y="2.5" width="2.6" height="11" rx="1"/></svg></span><span class="h1t">Mes Finances</span></h1>
@@ -1889,7 +1890,22 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
   navigator.serviceWorker.addEventListener('message',e=>{ if(e.data?.version) $('#appVersion').textContent=e.data.version.replace('gfp-v','version '); });
   navigator.serviceWorker.ready.then(r=>r.active?.postMessage('version'));
 }
-async function applyUpdate(){ await saving; location.reload(); }
+async function applyUpdate(){ await forceUpdate(); }
+/* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
+const APP_V=21;
+document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
+// Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
+async function forceUpdate(){
+  try{ await saving; }catch(_){}
+  try{ for(const r of await navigator.serviceWorker?.getRegistrations?.()||[]) await r.unregister(); }catch(_){}
+  try{ for(const k of await caches.keys()) await caches.delete(k); }catch(_){}
+  location.replace(location.pathname+'?v='+Date.now()); }
+// À l'ouverture et au retour sur l'appli : la version en ligne est-elle plus récente que celle-ci ?
+async function checkOnlineVersion(){
+  if(!location.protocol.startsWith('http')) return;
+  try{ const t=await (await fetch('sw.js?z='+Date.now(),{cache:'no-store'})).text(); const v=+(t.match(/gfp-v(\d+)/)||[])[1];
+    if(v>APP_V) $('#updBar').classList.remove('hide'); }catch(_){} }
+checkOnlineVersion(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkOnlineVersion(); });
 $('#month').value=month; $('#month').onchange=e=>{ if(e.target.value){ month=e.target.value; render(); } };
 function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,savings:renderSavings,analysis:renderAnalysis,sim:renderSim,settings:renderSettings})[view](); }
 let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(render,150); });
