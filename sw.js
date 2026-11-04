@@ -1,6 +1,6 @@
 // Service worker : met l'application en cache pour qu'elle fonctionne hors connexion.
 // Augmentez VERSION à chaque mise à jour de GFP.html pour forcer le rafraîchissement.
-const VERSION = 'gfp-v23';
+const VERSION = 'gfp-v24';
 const FILES = ['./', './GFP.html', './manifest.webmanifest', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

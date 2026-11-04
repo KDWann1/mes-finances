@@ -334,9 +334,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
   <input type="password" id="code2" autocomplete="new-password" placeholder="Confirmez le code" class="hide">
   <button class="btn primary" id="lockBtn">Déverrouiller</button>
   <p id="lockMsg" class="small neg"></p>
-  <button type="button" class="link small" id="forgot">Code oublié ?</button>
-  <p class="small muted" style="margin:10px 0 0">Version <b class="appv"></b> · <button type="button" class="link small" onclick="forceUpdate()">Rechercher une mise à jour</button></p>
-</form></div>
+  <button type="button" class="link small" id="forgot">Code oublié ?</button></form></div>
 <header><div class="hwrap">
   <h1><span class="logo"><svg viewBox="0 0 16 16" fill="#fff"><rect x="2.5" y="9" width="2.6" height="4.5" rx="1"/><rect x="6.7" y="6" width="2.6" height="7.5" rx="1"/><rect x="10.9" y="2.5" width="2.6" height="11" rx="1"/></svg></span><span class="h1t">Mes Finances</span></h1>
   <nav id="nav">
@@ -1907,7 +1905,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await forceUpdate(); }
 /* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
-const APP_V=23;
+const APP_V=24;
 document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
 // Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
 async function forceUpdate(){
