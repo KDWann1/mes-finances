@@ -258,6 +258,25 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .op-b b{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .op-b small{color:var(--muted);font-size:12px}
 .op-edit{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 2px 12px 46px}
 .op-edit.hide{display:none}
+.day-h{cursor:pointer;user-select:none} .day-chev{display:inline-block;transition:transform .2s;color:var(--muted)}
+.day.shut .day-chev{transform:rotate(-90deg)} .day.shut .op,.day.shut .op-edit{display:none}
+/* éléments qui s'ouvrent au toucher (drill-down) */
+.tap{cursor:pointer} .chev-s{color:var(--muted);font-weight:400}
+.tap:hover .chev-s{color:var(--accent)}
+/* fenêtre de détail */
+.sheet{position:fixed;inset:0;z-index:55;display:flex;align-items:flex-end;justify-content:center}
+.sheet.hide{display:none}
+.sheet-bg{position:absolute;inset:0;background:rgba(0,0,0,.45);animation:fadeIn .2s}
+.sheet-box{position:relative;width:100%;max-width:640px;max-height:82vh;overflow:auto;background:var(--surface);border-radius:20px 20px 0 0;padding:6px 18px calc(18px + env(safe-area-inset-bottom));animation:sheetUp .25s ease-out;box-shadow:0 -10px 40px rgba(0,0,0,.25)}
+.sheet-h{position:sticky;top:0;background:var(--surface);display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 0 8px;font-size:16px;z-index:1}
+.sheet-h::before{content:'';position:absolute;top:2px;left:50%;width:40px;height:4px;border-radius:2px;background:var(--border);transform:translateX(-50%)}
+.sheet-x{all:unset;cursor:pointer;width:32px;height:32px;border-radius:50%;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;color:var(--text-2)}
+.sh-tot{display:flex;justify-content:space-between;align-items:baseline;padding:10px 12px;background:var(--surface-2);border-radius:12px;margin-bottom:6px;font-size:14px}
+.sheet .op{cursor:default}
+@keyframes sheetUp{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+@keyframes fadeIn{from{opacity:0}to{opacity:1}}
+@media (min-width:761px){ .sheet{align-items:center} .sheet-box{border-radius:20px;max-height:80vh} }
+@media (prefers-reduced-motion:reduce){ .sheet-box,.sheet-bg{animation:none} }
 .chip-btn{all:unset;cursor:pointer;background:rgba(255,255,255,.28);border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .chip-btn:hover{background:rgba(255,255,255,.38)}
 .save-card{background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;border:2px solid transparent}
@@ -655,6 +674,8 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 </section>
 </main>
 <div class="tip" id="tip"></div>
+<div id="sheet" class="sheet hide" role="dialog" aria-modal="true"><div class="sheet-bg" data-close></div>
+  <div class="sheet-box"><div class="sheet-h"><b id="shT"></b><button class="sheet-x" data-close aria-label="Fermer">✕</button></div><div id="shBody"></div></div></div>
 <div id="updBar" class="updbar hide">✨ Nouvelle version disponible <button class="btn primary" onclick="applyUpdate()">Mettre à jour</button></div>
 <button id="fab" title="Ajouter une opération" onclick="quickAdd()">+</button>
 
@@ -925,17 +946,58 @@ document.addEventListener('click',e=>{ const b=e.target.closest('[data-todo]'); 
   if(b.dataset.catFilter){ go('tx'); $('#txCat').value=b.dataset.catFilter; renderTx(); return; }
   go(b.dataset.todo); });
 
+/* ===================== Drill-down : fenêtre de détail commune ===================== */
+function openSheet(title,html){ $('#shT').innerHTML=title; $('#shBody').innerHTML=html; $('#sheet').classList.remove('hide'); document.body.style.overflow='hidden'; }
+function closeSheet(){ $('#sheet').classList.add('hide'); document.body.style.overflow=''; }
+$('#sheet').addEventListener('click',e=>{ if(e.target.closest('[data-close]')) closeSheet(); });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeSheet(); });
+const d2=s=>s.split('-').reverse().join('/');
+// liste d'opérations avec total : ce qui compose un chiffre
+function opsSheet(title,ops,sub=''){
+  ops=ops.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const tot=ops.reduce((s,t)=>s+(t.type==='revenu'?t.montant:-t.montant),0);
+  openSheet(title, `${sub?`<p class="small muted" style="margin:0 0 8px">${sub}</p>`:''}
+    <div class="sh-tot"><span>${ops.length} opération${ops.length>1?'s':''}</span><b class="${tot>=0?'pos':'neg'}">${tot>=0?'+':'−'}${eur2(Math.abs(tot))}</b></div>
+    ${ops.length?ops.map(t=>`<div class="op"><span class="av">${catIcon(t.categorie)}</span><span class="op-b"><b>${esc(t.libelle)||'Sans libellé'}</b><small>${d2(t.date)} · ${esc(t.categorie)}</small></span>${amt(t)}</div>`).join('')
+      :'<div class="empty">Aucune opération.</div>'}`); }
+const depsOf=(m,cat)=>S.tx.filter(t=>t.type==='depense' && ym(t.date)===m && !isInt(t) && (!cat||t.categorie===cat));
+// historique d'une dépense habituelle / d'un versement programmé, mois par mois
+function habitSheet(key){
+  const r=[...fixedCharges(),...savingsPlans()].find(x=>x.key===key); if(!r) return;
+  const ops=S.tx.filter(t=>t.type==='depense' && libKey(t.libelle)===key).sort((a,b)=>b.date.localeCompare(a.date));
+  const avg=ops.length?ops.reduce((s,t)=>s+t.montant,0)/ops.length:0;
+  openSheet(`${catOf(r.cat)?.groupe==='epargne'?'🐷':catIcon(r.cat)} ${esc(r.nom)}`, `<p class="small muted" style="margin:0 0 8px">${esc(r.cat)} · vers le ${r.day} du mois · ${eur(r.montant)} / mois, soit ${eur(r.montant*12)} / an</p>
+    <div class="sh-tot"><span>${ops.length} ${catOf(r.cat)?.groupe==='epargne'?'versement':'prélèvement'}${ops.length>1?'s':''} trouvé${ops.length>1?'s':''}</span><b>moyenne ${eur2(avg)}</b></div>
+    ${ops.map(t=>`<div class="op"><span class="op-b"><b>${monthLabel(ym(t.date))}</b><small>${d2(t.date)} · ${esc(t.libelle)}</small></span>${amt(t)}</div>`).join('')||'<div class="empty">Ajoutée à la main : aucun prélèvement trouvé dans vos relevés.</div>'}`); }
+// évolution du solde d'un compte (Patrimoine / Épargne)
+function assetSheet(id){
+  const a=S.assets.find(x=>x.id===id); if(!a) return; const h=Object.entries(S.snaps[a.id]||{}).sort((x,y)=>y[0].localeCompare(x[0]));
+  openSheet(`🏦 ${esc(a.nom)}`, `<p class="small muted" style="margin:0 0 8px">${ASSET_TYPES[a.type]?.l||''} · soldes relevés mois par mois</p>
+    <div id="shChart"></div>
+    ${h.map(([m,v],i)=>{ const p=h[i+1]?.[1], d=p!=null?v-p:null; return `<div class="op"><span class="op-b"><b>${monthLabel(m)}</b>${d!=null?`<small class="${d>=0?'pos':'neg'}">${d>=0?'+':'−'}${eur(Math.abs(d))} sur le mois</small>`:'<small>premier solde connu</small>'}</span><b>${eur2(v)}</b></div>`; }).join('')||'<div class="empty">Aucun solde enregistré.</div>'}`);
+  if(h.length>=2){ const asc=h.slice().reverse(); lineChart($('#shChart'), asc.map(x=>monthLabel(x[0],true)), [{name:'Solde',color:'var(--s1)',values:asc.map(x=>x[1]),fill:true}], 170); } }
+
+// points d'entrée du drill-down
+$('#chCats').addEventListener('click',e=>{ const r=e.target.closest('[data-dcat]'); if(r) opsSheet(`${catIcon(r.dataset.dcat)} ${esc(r.dataset.dcat)} · ${monthLabel(curMonth())}`, depsOf(curMonth(),r.dataset.dcat)); });
+$('#budgetList').addEventListener('click',e=>{ if(e.target.closest('input')) return; const r=e.target.closest('[data-dcat]'); if(!r) return;
+  const c=r.dataset.dcat, b=S.budgets[c]; opsSheet(`${catIcon(c)} ${esc(c)} · ${monthLabel(curMonth())}`, depsOf(curMonth(),c), b?`Budget du mois : ${eur(b)}`:''); });
+['#fixedList','#svProg'].forEach(s=>$(s).addEventListener('click',e=>{ const n=e.target.closest('[data-dkey]'); if(!n) return; e.preventDefault(); habitSheet(n.dataset.dkey); }, true));
+$('#svAcc').addEventListener('click',e=>{ const r=e.target.closest('[data-dasset]'); if(r) assetSheet(r.dataset.dasset); });
+
 /* Graphiques et règle 50/30/20 (écran Analyse) */
 function renderCharts(m){
   const months=[...Array(6)].map((_,i)=>addMonths(m,i-5));
   barChart($('#chMonthly'), months.map(x=>monthLabel(x,true)), [
     {name:'Entrées',color:'var(--s1)',values:months.map(x=>monthTotals(x).rev)},
     {name:'Dépenses',color:'var(--s2)',values:months.map(x=>monthTotals(x).dep)}]);
+  // toucher un mois du graphique : toutes ses opérations
+  $('#chMonthly').querySelectorAll('rect[data-i]').forEach(r=>{ r.style.cursor='pointer'; r.addEventListener('click',()=>{ hideTip(); const x=months[+r.dataset.i];
+    opsSheet(`📅 ${monthLabel(x)}`, S.tx.filter(t=>bm(t)===x && !isInt(t)), 'Entrées et dépenses du mois (hors virements entre vos comptes).'); }); });
   $('#catMonth').textContent = monthLabel(m);
   const by={}; for(const x of S.tx) if(ym(x.date)===m && x.type==='depense' && !isInt(x)) by[x.categorie]=(by[x.categorie]||0)+x.montant;
   const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]), tot=rows.reduce((a,r)=>a+r[1],0), mx=rows[0]?.[1]||1;
   $('#chCats').innerHTML = rows.length ? rows.map(([c,v])=>{ const b=S.budgets[c];
-    return `<div style="margin:8px 0"><div class="row small"><span><span class="ci">${catIcon(c)}</span>${esc(c)}${b?` <span class="tag">budget ${eur(b)}</span>`:''}</span><span><b>${eur(v)}</b> <span class="muted">${Math.round(v/tot*100)} %</span></span></div>
+    return `<div class="tap" data-dcat="${esc(c)}" style="margin:8px 0"><div class="row small"><span><span class="ci">${catIcon(c)}</span>${esc(c)}${b?` <span class="tag">budget ${eur(b)}</span>`:''}</span><span><b>${eur(v)}</b> <span class="muted">${Math.round(v/tot*100)} %</span> <span class="chev-s">›</span></span></div>
     <div class="bar"><i style="width:${v/mx*100}%" class="${b&&v>b?'over':''}"></i></div></div>`; }).join('') : '<div class="empty">Aucune dépense ce mois-ci.</div>';
   const m12=[...Array(12)].map((_,i)=>addMonths(m,i-11)); let c=0;
   const cum=m12.map(x=>{ const k=monthTotals(x); c+=k.rev-k.dep; return c; });
@@ -1003,7 +1065,7 @@ function renderTx(){
   // regroupement par jour : « Mardi 28 octobre » puis les opérations du jour
   const days=[]; for(const t of list){ const d=days.at(-1); if(d&&d.date===t.date) d.ops.push(t); else days.push({date:t.date,ops:[t]}); }
   const dayLbl=s=>{ const x=new Date(s+'T12:00'); const l=x.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); return l.charAt(0).toUpperCase()+l.slice(1); };
-  $('#txBody').innerHTML = list.length ? days.map(d=>`<div class="day"><div class="day-h"><span>${dayLbl(d.date)}</span><span>${(()=>{ const v=d.ops.reduce((s,t)=>s+(t.type==='revenu'?t.montant:-t.montant),0); return `<span class="${v>=0?'pos':'neg'}">${v>=0?'+':'−'}${eur(Math.abs(v))}</span>`; })()}</span></div>
+  $('#txBody').innerHTML = list.length ? days.map(d=>`<div class="day"><div class="day-h" title="Toucher pour replier / déplier"><span><span class="day-chev">⌄</span> ${dayLbl(d.date)} <span class="muted" style="font-weight:400">· ${d.ops.length}</span></span><span>${(()=>{ const v=d.ops.reduce((s,t)=>s+(t.type==='revenu'?t.montant:-t.montant),0); return `<span class="${v>=0?'pos':'neg'}">${v>=0?'+':'−'}${eur(Math.abs(v))}</span>`; })()}</span></div>
     ${d.ops.map(t=>`<div class="op" data-op="${t.id}"><span class="av">${catIcon(t.categorie)}</span>
       <span class="op-b"><b>${esc(t.libelle)||'Sans libellé'}</b><small>${esc(t.categorie)}${t.rec?' · récurrent':''}${bm(t)!==ym(t.date)?` · compté en ${monthLabel(bm(t)).split(' ')[0]}`:''}</small></span>
       ${amt(t)}</div>
@@ -1017,6 +1079,8 @@ let txKind='all';
 $('#txKind').addEventListener('click',e=>{ const b=e.target.closest('[data-k]'); if(!b) return; txKind=b.dataset.k;
   document.querySelectorAll('#txKind button').forEach(x=>x.classList.toggle('on',x===b)); renderTx(); });
 // toucher une opération : affiche / masque sa catégorie et le bouton Supprimer
+// toucher l'en-tête d'un jour : replie / déplie les opérations de ce jour
+$('#txBody').addEventListener('click',e=>{ const h=e.target.closest('.day-h'); if(h) h.parentElement.classList.toggle('shut'); });
 $('#txBody').addEventListener('click',e=>{ const op=e.target.closest('.op'); if(!op) return;
   const ed=$(`[data-ed="${op.dataset.op}"]`), open=ed.classList.contains('hide');
   document.querySelectorAll('#txBody .op-edit').forEach(x=>x.classList.add('hide')); document.querySelectorAll('#txBody .op').forEach(x=>x.classList.remove('open'));
@@ -1086,7 +1150,7 @@ const fxPaid=(r,m)=>S.tx.some(t=>t.type==='depense' && ym(t.date)===m && libKey(
 function fxRow(r,m){ const p=fxPaid(r,m), sav=catOf(r.cat)?.groupe==='epargne'; return `<label class="fx ${r.on?'':'off'}">
     <input type="checkbox" data-fx="${esc(r.key)}" ${r.on?'checked':''}>
     <span class="av">${sav?'🐷':catIcon(r.cat)}</span>
-    <span class="fx-b"><span class="fx-n">${esc(r.nom)}</span><span class="muted small">${sav?'':esc(r.cat)+' · '}vers le ${r.day} du mois${r.manual?' · <span class="tag">ajoutée</span>':''}</span></span>
+    <span class="fx-b tap" data-dkey="${esc(r.key)}"><span class="fx-n">${esc(r.nom)} <span class="chev-s">›</span></span><span class="muted small">${sav?'':esc(r.cat)+' · '}vers le ${r.day} du mois${r.manual?' · <span class="tag">ajoutée</span>':''}</span></span>
     <span class="fx-m"><b>${eur(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ '+(sav?'versé':'payé'):'à venir'}</span></span>
     <button type="button" class="fx-del" data-fxdel="${esc(r.key)}" title="Supprimer">✕</button></label>`; }
 function fillBudgets(){ const r=applyFixedBudgets();
@@ -1192,7 +1256,7 @@ function renderSavings(){
   const pl=savingsPlans();
   $('#svProg').innerHTML = pl.length ? `<div class="fx-list">${pl.map(r=>fxRow(r,m)).join('')}</div><p class="small muted" style="margin:8px 0 0">Décochez pour ne pas compter, ✕ pour supprimer.</p>`
     : '<div class="empty">Aucun versement régulier détecté (il faut au moins 2 mois de relevés).<br><span class="small">Vous pouvez en ajouter un dans Budgets → Dépenses habituelles → « Ajouter », catégorie Épargne.</span></div>';
-  $('#svAcc').innerHTML = s.accs.length ? s.accs.map(a=>{ const v=assetVal(a,m), pv=assetVal(a,addMonths(m,-1)); return `<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(a.nom)}<br><span class="muted">${ASSET_TYPES[a.type]?.l||''}</span></span><span style="text-align:right"><b>${eur2(v)}</b><br><span class="${v>=pv?'pos':'neg'}">${v-pv?(v>pv?'+':'')+eur(v-pv)+' sur 1 mois':''}</span></span></div>`; }).join('')
+  $('#svAcc').innerHTML = s.accs.length ? s.accs.map(a=>{ const v=assetVal(a,m), pv=assetVal(a,addMonths(m,-1)); return `<div class="row small tap" data-dasset="${a.id}" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(a.nom)} <span class="chev-s">›</span><br><span class="muted">${ASSET_TYPES[a.type]?.l||''}</span></span><span style="text-align:right"><b>${eur2(v)}</b><br><span class="${v>=pv?'pos':'neg'}">${v-pv?(v>pv?'+':'')+eur(v-pv)+' sur 1 mois':''}</span></span></div>`; }).join('')
     : `<div class="empty">Aucun compte d'épargne suivi pour l'instant.<br><span class="small">Importez votre dernier relevé PDF : les soldes de vos comptes d'épargne (livret, PEL…) imprimés dessus s'ajouteront ici. Les opérations déjà importées sont ignorées.</span>
       <div style="margin-top:12px"><label class="btn primary">📄 Importer mon dernier relevé…<input type="file" accept="application/pdf,.pdf,.ofx,.qfx,.qif,.csv,.txt" class="hide" onchange="window.IMPBACK='savings';go('settings');importBank(this)"></label></div></div>`;
   const ms=[...Array(12)].map((_,i)=>addMonths(m,i-11));
@@ -1252,7 +1316,7 @@ function renderBudget(){
   const rows=S.cats.filter(c=>c.type==='depense' && c.groupe!=='interne').map(c=>{ const b=S.budgets[c.nom]||0, s=spent[c.nom]||0; if(b){tb+=b;ts+=s;}
     const pct=b?s/b*100:0;
     return `<div class="brow">
-      <div><span class="ci">${catIcon(c.nom)}</span>${esc(c.nom)}<div class="small muted">${eur(s)} dépensé${b?` · ${s>b?`<span class="neg">dépassé de ${eur(s-b)}</span>`:`reste ${eur(b-s)}`}`:''}${fx[c.nom]?` · <span class="tag">dont ${eur(fx[c.nom])} récurrents</span>`:''}</div></div>
+      <div class="tap" data-dcat="${esc(c.nom)}"><span class="ci">${catIcon(c.nom)}</span>${esc(c.nom)} <span class="chev-s">›</span><div class="small muted">${eur(s)} dépensé${b?` · ${s>b?`<span class="neg">dépassé de ${eur(s-b)}</span>`:`reste ${eur(b-s)}`}`:''}${fx[c.nom]?` · <span class="tag">dont ${eur(fx[c.nom])} récurrents</span>`:''}</div></div>
       ${c.nom==='Divers'?`<input type="number" value="${b||''}" placeholder="—" readonly title="Calculé à partir de l'enveloppe Divers ci-dessus" style="opacity:.7">`
         :`<input type="number" min="0" step="10" value="${b||''}" placeholder="—" data-b="${esc(c.nom)}">`}
       <div class="bar">${b?`<i style="width:${Math.min(100,pct)}%" class="${pct>100?'over':''}"></i>`:''}</div></div>`; }).join('');
@@ -2041,7 +2105,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await forceUpdate(); }
 /* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
-const APP_V=29;
+const APP_V=30;
 document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
 // Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
 async function forceUpdate(){
