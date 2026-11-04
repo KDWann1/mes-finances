@@ -977,9 +977,14 @@ $('#autoBudget').addEventListener('change',e=>{ S.autoBudget=e.target.checked; i
 
 /* ---------- Enveloppe Divers : plusieurs lignes, dont une automatique = 10 % des revenus du mois précédent ---------- */
 function diversLines(m){
-  const prevRev=monthTotals(addMonths(m,-1)).rev;
-  const pm=monthLabel(addMonths(m,-1)).split(' ')[0];
-  const auto={id:'auto10',nom:`10 % des revenus ${/^[aeiouyàâéèh]/i.test(pm)?'d\'':'de '}${pm}`,montant:Math.round(prevRev*.10),auto:true,base:prevRev};
+  // base = salaire qui finance ce mois (avec la règle du 25 : salaire reçu fin du mois précédent).
+  // S'il n'est pas encore arrivé, on prend en attendant le dernier salaire connu.
+  const sal=x=>S.tx.filter(t=>t.type==='revenu' && t.categorie==='Salaire' && bm(t)===x);
+  let src=sal(m), wait=false;
+  if(!src.length){ for(let k=1;k<=3 && !src.length;k++) src=sal(addMonths(m,-k)); wait=src.length>0; }
+  const base=src.reduce((s,t)=>s+t.montant,0), last=src.map(t=>t.date).sort().at(-1);
+  const auto={id:'auto10',nom:'10 % du salaire',montant:Math.round(base*.10),auto:true,base,
+    info: base ? `10 % × ${eur2(base)} (salaire du ${last.split('-').reverse().join('/')})${wait?' · en attendant le salaire de ce mois':''}` : 'aucun salaire trouvé : saisissez-le ou importez votre relevé'};
   return [auto,...(S.diversLines||[])].map(l=>({...l,on:!S.diversOff?.[l.id]})); }
 function diversTotal(m){ return diversLines(m).filter(l=>l.on).reduce((s,l)=>s+l.montant,0); }
 function renderDivers(m){
@@ -987,7 +992,7 @@ function renderDivers(m){
   $('#diversList').innerHTML = `<div class="fx-list">${L.map(l=>`<label class="fx ${l.on?'':'off'}">
       <input type="checkbox" data-dv="${l.id}" ${l.on?'checked':''}>
       <span class="av">${l.auto?'🔟':'📦'}</span>
-      <span class="fx-b"><span class="fx-n">${esc(l.nom)}</span><span class="muted small">${l.auto?(l.base?`calcul automatique : 10 % × ${eur(l.base)}`:'aucun revenu saisi le mois précédent'):'ligne ajoutée par vous'}</span></span>
+      <span class="fx-b"><span class="fx-n">${esc(l.nom)}</span><span class="muted small">${l.auto?l.info:'ligne ajoutée par vous'}</span></span>
       <span class="fx-m"><b>${eur(l.montant)}</b></span>
       ${l.auto?'<span style="width:26px"></span>':`<button type="button" class="fx-del" data-dvdel="${l.id}" title="Supprimer cette ligne">✕</button>`}</label>`).join('')}</div>
     <div class="row" style="margin-top:10px;align-items:center"><span class="small muted">Budget « Divers » de ${monthLabel(m).split(' ')[0]} (somme des lignes cochées)</span><b style="font-size:18px">${eur(tot)}</b></div>
