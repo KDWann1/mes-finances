@@ -196,6 +196,10 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .fx input{width:18px;height:18px;accent-color:var(--accent);flex:none}
 .fx-b{flex:1;min-width:0;display:flex;flex-direction:column} .fx-n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .fx-m{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+.fx-del{all:unset;cursor:pointer;color:var(--muted);font-size:14px;padding:6px 4px 6px 8px;flex:none}
+.fx-del:hover{color:var(--bad)}
+.fx-add{margin-top:12px} .fx-add>summary{list-style:none;display:inline-block} .fx-add>summary::-webkit-details-marker{display:none}
+#fxRestore{display:block;margin-top:10px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:70;
   background:var(--text);color:var(--surface);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100vw - 32px);transition:all .25s}
 .toast.on{opacity:1;transform:translate(-50%,0)}
@@ -213,6 +217,42 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .adv-x{font-size:13px;color:var(--text-2)}
 .gain{flex:none;text-align:right;font-weight:700;color:var(--good);font-variant-numeric:tabular-nums;white-space:nowrap}
 .gain small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+/* conseils dépliables */
+.advd{border-bottom:1px solid var(--surface-2)} .advd:last-child{border-bottom:0}
+.advd>summary{list-style:none;cursor:pointer;border-bottom:0}
+.advd>summary::-webkit-details-marker{display:none}
+.adv-chev{flex:none;color:var(--muted);font-size:22px;line-height:38px;transition:transform .2s}
+.advd[open] .adv-chev{transform:rotate(90deg)}
+.dd{margin:0 0 14px 50px;padding:12px 14px;background:var(--surface-2);border-radius:12px;animation:ddIn .25s ease-out}
+@keyframes ddIn{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+.dd .row{padding:5px 0;border-bottom:1px dashed var(--border)} .dd .row:last-child{border-bottom:0}
+.dd-calc{font-size:13px;background:var(--surface);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+.dd-steps{margin:10px 0 4px;padding-left:20px;font-size:13px;color:var(--text-2)} .dd-steps li{margin:4px 0}
+.dd-act{margin-top:10px}
+/* émoticônes animées (désactivées si l'appareil demande moins d'animations) */
+.adv-ic{display:inline-flex;transform-origin:50% 80%}
+.an-bounce{animation:anBounce 2.4s ease-in-out infinite}
+.an-pulse{animation:anPulse 1.2s ease-in-out infinite}
+.an-tada{animation:anTada 3s ease-in-out infinite}
+.an-float{animation:anFloat 3s ease-in-out infinite}
+.an-spin{animation:anSpin 4s linear infinite}
+.an-wiggle{animation:anWiggle 2.6s ease-in-out infinite}
+.an-shake{animation:anShake 3s ease-in-out infinite}
+.an-steam{animation:anSteam 2.8s ease-in-out infinite}
+.an-grow{animation:anGrow 3s ease-in-out infinite}
+.advd:hover .adv-ic{animation-duration:.9s}
+@keyframes anBounce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-7px) scale(1.08)}45%{transform:translateY(0) scale(.95,1.05)}}
+@keyframes anPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+@keyframes anTada{0%,70%,100%{transform:none}75%{transform:scale(1.15) rotate(-8deg)}80%,90%{transform:scale(1.15) rotate(8deg)}85%,95%{transform:scale(1.15) rotate(-8deg)}}
+@keyframes anFloat{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-5px) rotate(4deg)}}
+@keyframes anSpin{to{transform:rotate(360deg)}}
+@keyframes anWiggle{0%,80%,100%{transform:rotate(0)}85%{transform:rotate(-14deg)}90%{transform:rotate(12deg)}95%{transform:rotate(-6deg)}}
+@keyframes anShake{0%,85%,100%{transform:translateX(0)}88%,94%{transform:translateX(-3px)}91%,97%{transform:translateX(3px)}}
+@keyframes anSteam{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px) rotate(-6deg)}}
+@keyframes anGrow{0%,100%{transform:scale(.9)}50%{transform:scale(1.12)}}
+.tile[data-go=analysis] .tile-ic{animation:anWiggle 3s ease-in-out infinite}
+@media (prefers-reduced-motion:reduce){ .adv-ic,.tile-ic{animation:none !important} .dd{animation:none} }
+@media (max-width:760px){ .dd{margin-left:0} .advd>summary.adv{flex-wrap:wrap} .adv-chev{position:absolute;right:16px} .advd{position:relative} }
 .tiles .tile[data-go=analysis]{background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;border:2px solid transparent}
 @media (max-width:760px){ .g4{grid-template-columns:1fr 1fr} .g4 .kpi .val{font-size:20px} .g4 .card{padding:13px} .adv{flex-wrap:wrap} .gain{flex-basis:100%;margin:-4px 0 0 50px;text-align:left} .gain small{display:inline;margin-left:4px} }
 /* cartes de l'accueil */
@@ -842,7 +882,9 @@ $('#txForm').onsubmit=e=>{
    Une dépense est « récurrente » si elle revient ~1 fois par mois avec un montant stable (voir analyze()).
    Le budget d'une catégorie est complété avec la somme de ses dépenses récurrentes (jamais diminué). */
 const ceil5=v=>Math.ceil(v/5)*5;
-function fixedCharges(){ return analyze(12).rec.filter(r=>!/épargne/i.test(r.cat)).map(r=>({...r,on:!S.fixedOff?.[r.key]})); }
+// dépenses habituelles = détectées (sauf celles supprimées par l'utilisateur) + ajoutées à la main
+function fixedCharges(){
+  return analyze(12).rec.filter(r=>!/épargne/i.test(r.cat)).sort((a,b)=>(b.manual?1:0)-(a.manual?1:0)||b.annuel-a.annuel).map(r=>({...r,on:!S.fixedOff?.[r.key]})); }
 function fixedByCat(list){ const by={}; for(const r of list) if(r.on) by[r.cat]=(by[r.cat]||0)+r.montant; return by; }
 function applyFixedBudgets(){ const by=fixedByCat(fixedCharges()); let created=0, raised=0;
   for(const [c,v] of Object.entries(by)){ const need=ceil5(v), cur=S.budgets[c]||0;
@@ -850,7 +892,20 @@ function applyFixedBudgets(){ const by=fixedByCat(fixedCharges()); let created=0
   if(created||raised) save(); return {created,raised}; }
 function renderFixed(m){
   const list=fixedCharges(), el=$('#fixedList'); $('#autoBudget').checked=S.autoBudget!==false;
-  if(!list.length){ el.innerHTML='<div class="empty" style="padding:16px 0">Importez au moins <b>2 mois</b> de relevés (Données → double-clic sur le logo) : les dépenses qui reviennent chaque mois apparaîtront ici.</div>'; return; }
+  const hidden=Object.keys(S.fixedHidden||{}).length;
+  // formulaire d'ajout manuel (libellé proposé à partir de vos opérations récentes)
+  const libs=[...new Set(S.tx.filter(t=>t.type==='depense' && t.libelle).sort((a,b)=>b.date.localeCompare(a.date)).map(t=>t.libelle))].slice(0,80);
+  const addForm=`<details class="fx-add"><summary class="btn">＋ Ajouter une dépense habituelle</summary>
+    <form id="fxForm" class="form" style="margin-top:10px">
+      <label style="grid-column:1/-1">Libellé<input name="nom" list="fxLibs" required placeholder="ex. Loyer, Abonnement salle de sport"></label>
+      <datalist id="fxLibs">${libs.map(l=>`<option value="${esc(l)}">`).join('')}</datalist>
+      <label>Catégorie<select name="cat">${S.cats.filter(c=>c.type==='depense').map(c=>`<option>${esc(c.nom)}</option>`).join('')}</select></label>
+      <label>Montant / mois (€)<input name="montant" type="number" step="0.01" min="0" required inputmode="decimal"></label>
+      <label>Jour du prélèvement<input name="day" type="number" min="1" max="31" value="5" inputmode="numeric"></label>
+      <div class="toolbar" style="margin:0"><button class="btn primary">Ajouter</button></div>
+    </form></details>`;
+  const restore = hidden ? `<button class="link small" id="fxRestore">Réafficher ${hidden} dépense${hidden>1?'s':''} supprimée${hidden>1?'s':''}</button>` : '';
+  if(!list.length){ el.innerHTML='<div class="empty" style="padding:16px 0">Importez au moins <b>2 mois</b> de relevés (Données → double-clic sur le logo) : les dépenses qui reviennent chaque mois apparaîtront ici. Vous pouvez aussi les ajouter vous-même.</div>'+addForm+restore; return; }
   const paid=r=>S.tx.some(t=>t.type==='depense' && ym(t.date)===m && libKey(t.libelle)===r.key);
   const on=list.filter(r=>r.on), tot=on.reduce((s,r)=>s+r.montant,0), done=on.filter(paid).reduce((s,r)=>s+r.montant,0);
   el.innerHTML = `<div class="fx-sum"><div><b>${eur(tot)}</b><span>par mois · ${on.length} dépense${on.length>1?'s':''}</span></div>
@@ -859,10 +914,11 @@ function renderFixed(m){
     <div class="fx-list">${list.map(r=>{ const p=paid(r); return `<label class="fx ${r.on?'':'off'}">
       <input type="checkbox" data-fx="${esc(r.key)}" ${r.on?'checked':''}>
       <span class="av">${catIcon(r.cat)}</span>
-      <span class="fx-b"><span class="fx-n">${esc(r.nom)}</span><span class="muted small">${esc(r.cat)} · vers le ${r.day} du mois</span></span>
-      <span class="fx-m"><b>${eur2(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ payé':'à venir'}</span></span></label>`; }).join('')}</div>
+      <span class="fx-b"><span class="fx-n">${esc(r.nom)}</span><span class="muted small">${esc(r.cat)} · vers le ${r.day} du mois${r.manual?' · <span class="tag">ajoutée</span>':''}</span></span>
+      <span class="fx-m"><b>${eur2(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ payé':'à venir'}</span></span>
+      <button type="button" class="fx-del" data-fxdel="${esc(r.key)}" title="Supprimer de mes dépenses habituelles">✕</button></label>`; }).join('')}</div>
     <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" onclick="fillBudgets()">Remplir mes budgets avec ces dépenses</button>
-      <span class="small muted">Décochez ce qui ne doit pas compter (dépense ponctuelle, abonnement résilié…).</span></div>`;
+      <span class="small muted">Décochez pour ne pas compter ce mois-ci, ✕ pour supprimer.</span></div>${addForm}${restore}`;
 }
 function fillBudgets(){ const r=applyFixedBudgets();
   toast(r.created||r.raised ? `${r.created} budget${r.created>1?'s':''} créé${r.created>1?'s':''}, ${r.raised} complété${r.raised>1?'s':''} avec vos dépenses récurrentes.` : 'Vos budgets couvrent déjà toutes vos dépenses récurrentes.'); renderBudget(); }
@@ -870,6 +926,23 @@ function toast(msg){ let t=$('#toast'); if(!t){ t=document.createElement('div');
   t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),3500); }
 $('#fixedList').addEventListener('change',e=>{ const k=e.target.dataset.fx; if(k==null) return; S.fixedOff=S.fixedOff||{};
   if(e.target.checked) delete S.fixedOff[k]; else S.fixedOff[k]=true; if(S.autoBudget!==false) applyFixedBudgets(); save(); renderBudget(); });
+$('#fixedList').addEventListener('click',e=>{
+  const del=e.target.closest('[data-fxdel]');
+  if(del){ e.preventDefault(); const k=del.dataset.fxdel, man=(S.fixedManual||[]).find(x=>x.key===k);
+    if(man){ if(!confirm(`Supprimer « ${man.nom} » de vos dépenses habituelles ?`)) return; S.fixedManual=S.fixedManual.filter(x=>x!==man); }
+    else { S.fixedHidden=S.fixedHidden||{}; S.fixedHidden[k]=true; }
+    delete S.fixedOff?.[k]; save(); renderBudget(); toast('Dépense retirée de vos habitudes. Les budgets déjà fixés ne changent pas.'); return; }
+  if(e.target.id==='fxRestore'){ S.fixedHidden={}; save(); renderBudget(); toast('Dépenses détectées réaffichées.'); }
+});
+$('#fixedList').addEventListener('input',e=>{ // libellé connu → catégorie et montant pré-remplis
+  if(e.target.name!=='nom') return; const f=e.target.form, t=S.tx.filter(x=>x.type==='depense'&&x.libelle===e.target.value).sort((a,b)=>b.date.localeCompare(a.date))[0];
+  if(t){ f.cat.value=t.categorie; f.montant.value=t.montant; f.day.value=+t.date.slice(8); } });
+$('#fixedList').addEventListener('submit',e=>{ if(e.target.id!=='fxForm') return; e.preventDefault(); const f=e.target;
+  const nom=f.nom.value.trim(), key=libKey(nom)||nom.toUpperCase(); S.fixedManual=S.fixedManual||[];
+  S.fixedManual=S.fixedManual.filter(x=>x.key!==key);
+  S.fixedManual.push({key,nom,cat:f.cat.value,montant:+f.montant.value,day:Math.min(31,Math.max(1,+f.day.value||1))});
+  if(S.fixedHidden) delete S.fixedHidden[key];
+  if(S.autoBudget!==false) applyFixedBudgets(); save(); renderBudget(); toast(`« ${nom} » ajoutée à vos dépenses habituelles ✅`); });
 $('#autoBudget').addEventListener('change',e=>{ S.autoBudget=e.target.checked; if(S.autoBudget) applyFixedBudgets(); save(); renderBudget(); });
 
 function renderBudget(){
@@ -1164,6 +1237,10 @@ function analyze(n){
     const last=g.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
     rec.push({key:k, nom:last.libelle||k, cat:last.categorie, montant:md, annuel:md*12, mois:ms.size, last:last.date, day:Math.round(median(g.map(t=>+t.date.slice(8)))),
       sub:/abonnement|loisirs|télécom|énergie|assurance/i.test(last.categorie)}); }
+  // vos choix priment : dépenses supprimées retirées, dépenses ajoutées à la main incluses
+  const man=(S.fixedManual||[]).map(x=>({...x,annuel:x.montant*12,manual:true,sub:/abonnement|loisirs|télécom|énergie|assurance/i.test(x.cat)})), mk=new Set(man.map(x=>x.key));
+  for(let i=rec.length-1;i>=0;i--) if(S.fixedHidden?.[rec[i].key] || mk.has(rec[i].key)) rec.splice(i,1);
+  rec.push(...man);
   rec.sort((a,b)=>b.annuel-a.annuel);
   // 2) plus grosses dépenses
   const top=deps.slice().sort((a,b)=>b.montant-a.montant).slice(0,5);
@@ -1184,36 +1261,99 @@ function analyze(n){
   const grp={besoins:0,envies:0}; for(const t of deps) grp[catOf(t.categorie)?.groupe==='besoins'?'besoins':'envies']+=t.montant/active;
   return {n,end,months,active,avg,rec,top,ref,before,evo,odd,feesY,feesN:fees.length,small:small.length/active,smallM,grp,count:tx.length};
 }
-// Conseils simples, concrets et chiffrés (gain = économie ou épargne annuelle estimée)
+// Conseils simples, concrets et chiffrés (gain = économie ou épargne annuelle estimée).
+// Chaque conseil a un détail dépliable (more), une action (act) et une animation d'émoticône (an).
 function buildTips(a){
   const T=[], {rev,dep}=a.avg, rate=a.avg.rate, margin=rev-dep;
   if(!a.count) return T;
-  if(rev && rate<0) T.push({ic:'🚨',t:'Vous dépensez plus que vous ne gagnez',txt:`En moyenne ${eur(-margin)} de plus que vos revenus chaque mois. Priorité : réduire 2 ou 3 postes ci-dessous avant toute épargne.`,lvl:'neg'});
-  else if(rev && rate<.10){ const x=r10(rev*.10); T.push({ic:'🐷',t:`Épargnez ${eur(x)} par mois, automatiquement`,txt:`Programmez un virement vers un livret le jour de la paie : on dépense moins ce qu'on ne voit pas. Objectif de départ : 10 % de vos revenus.`,gain:x*12,gl:'épargnés / an'}); }
-  else if(rev && rate<.20){ const x=r10(rev*.20-margin); T.push({ic:'🐷',t:`Encore ${eur(x)} par mois pour atteindre 20 %`,txt:`Vous épargnez déjà ${Math.round(rate*100)} % de vos revenus. Augmentez votre virement automatique de ${eur(x)} pour viser la règle des 20 %.`,gain:x*12,gl:'épargnés / an'}); }
-  else if(rev) T.push({ic:'✅',t:`Bravo : vous épargnez ${Math.round(rate*100)} % de vos revenus`,txt:'Une fois votre réserve de sécurité constituée, placez l’excédent sur le long terme (assurance-vie, PEA…) pour le faire fructifier.',lvl:'pos'});
+  const inP=t=>a.months.includes(bm(t)), depsP=S.tx.filter(t=>t.type==='depense'&&!isSaving(t)&&inP(t));
+  const d2=t=>t.date.split('-').reverse().join('/');
+  const ops=(arr,n=8)=>`<div class="dd-ops">${arr.slice(0,n).map(t=>`<div class="row small"><span><span class="ci">${catIcon(t.categorie)}</span>${d2(t)} · ${esc(t.libelle||t.categorie)}</span><b>${eur2(t.montant)}</b></div>`).join('')}${arr.length>n?`<div class="small muted">… et ${arr.length-n} autre${arr.length-n>1?'s':''}</div>`:''}</div>`;
+  const months=a.months.map(m=>({m,...monthTotals(m)})).filter(x=>x.rev||x.dep);
+  const mtable=`<div class="dd-tbl"><div class="row small muted"><span>Mois</span><span>Revenus · Dépenses · Épargne</span></div>${months.map(x=>{ const r=x.rev?Math.round((x.rev-x.dep)/x.rev*100):null;
+    return `<div class="row small"><span>${monthLabel(x.m)}</span><span>${eur(x.rev)} · ${eur(x.dep)} · <b class="${r==null?'':r>=20?'pos':r<0?'neg':''}">${r==null?'—':r+' %'}</b></span></div>`; }).join('')}</div>`;
+  const steps=arr=>`<ol class="dd-steps">${arr.map(s=>`<li>${s}</li>`).join('')}</ol>`;
+  const calc=s=>`<div class="dd-calc">🧮 ${s}</div>`;
+
+  if(rev && rate<0) T.push({ic:'🚨',an:'pulse',t:'Vous dépensez plus que vous ne gagnez',lvl:'neg',
+    txt:`En moyenne ${eur(-margin)} de plus que vos revenus chaque mois. Priorité : réduire 2 ou 3 postes avant toute épargne.`,
+    more:calc(`revenus moyens ${eur(rev)} − dépenses moyennes ${eur(dep)} = <b class="neg">${eur(margin)}</b> par mois`)+mtable
+      +steps(['Regardez vos 3 plus grosses catégories de dépenses dans l\'onglet Budgets.','Fixez un plafond un peu plus bas que d\'habitude sur chacune.','Suspendez les achats non essentiels jusqu\'au retour à l\'équilibre.']),
+    act:{label:'Voir mes budgets',go:'budget'}});
+  else if(rev && rate<.10){ const x=r10(rev*.10); T.push({ic:'🐷',an:'bounce',t:`Épargnez ${eur(x)} par mois, automatiquement`,gain:x*12,gl:'épargnés / an',
+    txt:'Programmez un virement vers un livret le jour de la paie : on dépense moins ce qu\'on ne voit pas.',
+    more:calc(`10 % de vos revenus moyens (${eur(rev)}) ≈ ${eur(x)} / mois → ${eur(x*12)} / an`)+mtable
+      +steps(['Ouvrez un livret d\'épargne réglementé si vous n\'en avez pas (gratuit, disponible à tout moment).',`Programmez un virement permanent de ${eur(x)} le lendemain de la paie.`,'Augmentez-le de 1 % à chaque hausse de salaire.']),
+    act:{label:'Créer un objectif d\'épargne',goal:'Épargne mensuelle',cible:x*12,mois:12}}); }
+  else if(rev && rate<.20){ const x=r10(rev*.20-margin); T.push({ic:'🐷',an:'bounce',t:`Encore ${eur(x)} par mois pour atteindre 20 %`,gain:x*12,gl:'épargnés / an',
+    txt:`Vous épargnez déjà ${Math.round(rate*100)} % de vos revenus. Augmentez votre virement automatique de ${eur(x)}.`,
+    more:calc(`objectif 20 % × ${eur(rev)} = ${eur(rev*.2)} ; aujourd'hui ${eur(margin)} → il manque ≈ ${eur(x)} / mois`)+mtable,
+    act:{label:'Créer un objectif d\'épargne',goal:'Épargne mensuelle',cible:x*12,mois:12}}); }
+  else if(rev) T.push({ic:'🏆',an:'tada',t:`Bravo : vous épargnez ${Math.round(rate*100)} % de vos revenus`,lvl:'pos',
+    txt:'Une fois votre réserve de sécurité constituée, placez l\'excédent sur le long terme pour le faire fructifier.',
+    more:mtable+steps(['Gardez 3 à 6 mois de dépenses disponibles sur un livret.','Au-delà, un placement long terme (assurance-vie, PEA…) peut mieux rapporter, avec plus de risque.','Comparez les scénarios dans le simulateur.']),
+    act:{label:'Ouvrir le simulateur',sim:Math.round(margin)}});
   // réserve de sécurité
-  const target=dep*3; let have=null;
-  if(S.assets.length) have=S.assets.filter(x=>['courant','livret'].includes(x.type)).reduce((s,x)=>s+assetVal(x,a.end),0);
-  else { const g=S.goals.find(x=>/pr[ée]caution|urgence|s[ée]curit/i.test(x.nom)); if(g) have=g.actuel; }
-  if(dep && (have==null || have<target)){ const miss=have==null?target:target-have, per=r10(Math.max(margin*.5, miss/12));
-    T.push({ic:'🛟',t:`Réserve de sécurité : ${eur(target)} conseillés`,txt:`C'est 3 mois de dépenses, pour faire face à un imprévu sans crédit.${have!=null?` Il vous manque ${eur(miss)}`:''} À ${eur(per)} par mois, elle est prête en ${Math.ceil(miss/per)} mois.`}); }
+  const target=dep*3; let have=null, src='';
+  if(S.assets.length){ have=S.assets.filter(x=>['courant','livret'].includes(x.type)).reduce((s,x)=>s+assetVal(x,a.end),0); src='comptes courants et livrets (Patrimoine)'; }
+  else { const g=S.goals.find(x=>/pr[ée]caution|urgence|s[ée]curit/i.test(x.nom)); if(g){ have=g.actuel; src=`objectif « ${esc(g.nom)} »`; } }
+  if(dep && (have==null || have<target)){ const miss=have==null?target:target-have, per=r10(Math.max(margin*.5, miss/12)), n=Math.ceil(miss/per);
+    T.push({ic:'🛟',an:'float',t:`Réserve de sécurité : ${eur(target)} conseillés`,
+      txt:`C'est 3 mois de dépenses, pour faire face à un imprévu sans crédit.${have!=null?` Il vous manque ${eur(miss)}.`:''} À ${eur(per)} par mois, elle est prête en ${n} mois.`,
+      more:calc(`dépenses moyennes ${eur(dep)} × 3 mois = <b>${eur(target)}</b> (idéal : × 6 = ${eur(dep*6)})`)
+        +(have!=null?calc(`déjà disponible : ${eur(have)} sur vos ${src}`):'<p class="small muted">Renseignez vos comptes dans Patrimoine pour suivre ce que vous avez déjà.</p>')
+        +steps(['Placez-la sur un livret : sans risque et disponible en 24 h.','Ne l\'utilisez que pour un vrai imprévu (panne, santé, perte d\'emploi).','Reconstituez-la après chaque utilisation.']),
+      act:{label:'Créer l\'objectif « Épargne de précaution »',goal:'Épargne de précaution',cible:Math.round(target),mois:n,actuel:have||0}}); }
   // abonnements
   const subs=a.rec.filter(r=>r.sub);
   if(subs.length){ const tot=subs.reduce((s,r)=>s+r.annuel,0), small=subs.slice().sort((x,y)=>x.montant-y.montant)[0];
-    T.push({ic:'🔁',t:`${subs.length} abonnement${subs.length>1?'s':''} : ${eur(tot)} par an`,txt:`Faites le tri dans la liste ci-dessous. Résilier un seul abonnement peu utilisé, comme « ${esc(small.nom)} », rapporte ${eur(small.annuel)} par an.`,gain:small.annuel,gl:'/ an'}); }
-  // catégorie en forte hausse
-  // (hors charges fixes : un loyer ou un crédit ne se « réduit » pas d'un mois sur l'autre)
+    T.push({ic:'🔁',an:'spin',t:`${subs.length} abonnement${subs.length>1?'s':''} : ${eur(tot)} par an`,gain:small.annuel,gl:'/ an',
+      txt:`Résilier un seul abonnement peu utilisé, comme « ${esc(small.nom)} », rapporte ${eur(small.annuel)} par an.`,
+      more:`<div class="dd-ops">${subs.map(r=>`<div class="row small"><span><span class="ci">${catIcon(r.cat)}</span>${esc(r.nom)}</span><span>${eur2(r.montant)} / mois · <b>${eur(r.annuel)} / an</b></span></div>`).join('')}</div>`
+        +steps(['Pour chacun, demandez-vous : l\'ai-je utilisé ce mois-ci ?','Résiliez ou passez à une formule moins chère (offre avec publicité, formule famille partagée…).','Décochez-le ensuite dans « Mes dépenses habituelles » (onglet Budgets).']),
+      act:{label:'Gérer mes dépenses habituelles',go:'budget'}}); }
+  // catégorie en forte hausse (hors charges fixes : un loyer ne se « réduit » pas d'un mois sur l'autre)
   const up=a.evo.filter(e=>e.d>30 && e.pct!=null && e.pct>.2 && !/logement|assurance/i.test(e.c)).sort((x,y)=>y.d-x.d)[0];
-  if(up) T.push({ic:'📈',t:`${up.c} : +${eur(up.d)} en ${monthLabel(a.ref).split(' ')[0]}`,txt:`Soit +${Math.round(up.pct*100)} % par rapport à d'habitude (${eur(up.base)} / mois). Fixez un budget de ${eur(r10(up.base))} pour garder le cap.`});
+  if(up){ const lst=depsP.filter(t=>t.categorie===up.c && ym(t.date)===a.ref).sort((x,y)=>y.montant-x.montant);
+    T.push({ic:'📈',an:'wiggle',t:`${up.c} : +${eur(up.d)} en ${monthLabel(a.ref).split(' ')[0]}`,
+      txt:`Soit +${Math.round(up.pct*100)} % par rapport à d'habitude (${eur(up.base)} / mois). Un budget de ${eur(r10(up.base))} aide à garder le cap.`,
+      more:calc(`${monthLabel(a.ref)} : ${eur(up.cur)} · moyenne des mois précédents : ${eur(up.base)}`)+`<div class="small muted" style="margin:6px 0 2px">Les opérations de ${monthLabel(a.ref)} :</div>`+ops(lst),
+      act:{label:`Fixer un budget de ${eur(r10(up.base))}`,budget:up.c,v:r10(up.base)}}); }
   // envies > 30 %
-  if(rev && a.grp.envies/rev>.30){ const cut=r10(a.grp.envies*.15); T.push({ic:'🛍️',t:`Dépenses « plaisir » : ${Math.round(a.grp.envies/rev*100)} % des revenus`,txt:`La règle conseille 30 % maximum. Réduire ces dépenses de 15 % (≈ ${eur(cut)} / mois) suffit souvent, sans se priver.`,gain:cut*12,gl:'/ an'}); }
-  if(a.feesY>=20) T.push({ic:'🏦',t:`Frais bancaires : ≈ ${eur(a.feesY)} par an`,txt:'Comparez avec une banque en ligne ou une offre moins chère : la plupart de ces frais peuvent disparaître.',gain:a.feesY,gl:'/ an'});
-  if(a.small>=8 && a.smallM>=40) T.push({ic:'☕',t:`${Math.round(a.small)} petits achats par mois`,txt:`Les dépenses de moins de 15 € représentent ${eur(a.smallM)} par mois. En supprimer la moitié = ${eur(a.smallM/2)} de plus chaque mois.`,gain:a.smallM/2*12,gl:'/ an'});
+  if(rev && a.grp.envies/rev>.30){ const cut=r10(a.grp.envies*.15), by={};
+    for(const t of depsP) if(catOf(t.categorie)?.groupe!=='besoins') by[t.categorie]=(by[t.categorie]||0)+t.montant/a.active;
+    T.push({ic:'🛍️',an:'wiggle',t:`Dépenses « plaisir » : ${Math.round(a.grp.envies/rev*100)} % des revenus`,gain:cut*12,gl:'/ an',
+      txt:`La règle conseille 30 % maximum. Réduire ces dépenses de 15 % (≈ ${eur(cut)} / mois) suffit souvent, sans se priver.`,
+      more:`<div class="dd-ops">${Object.entries(by).sort((x,y)=>y[1]-x[1]).map(([c,v])=>`<div class="row small"><span><span class="ci">${catIcon(c)}</span>${esc(c)}</span><b>${eur(v)} / mois</b></div>`).join('')}</div>`
+        +steps(['Choisissez 1 ou 2 catégories ci-dessus, pas toutes.','Fixez-leur un budget 15 % sous votre moyenne.','Gardez une petite enveloppe « plaisir » : se priver de tout ne tient pas dans la durée.']),
+      act:{label:'Voir mes budgets',go:'budget'}}); }
+  // frais bancaires
+  if(a.feesY>=20){ const lst=depsP.filter(t=>/frais|commission|agios|cotisation\s*(carte|cb)|tenue\s*de\s*compte|int[ée]r[êe]ts\s*d[ée]biteurs/i.test(t.libelle||''));
+    T.push({ic:'🏦',an:'shake',t:`Frais bancaires : ≈ ${eur(a.feesY)} par an`,gain:a.feesY,gl:'/ an',
+      txt:'Comparez avec une banque en ligne ou une offre moins chère : la plupart de ces frais peuvent disparaître.',
+      more:ops(lst)+steps(['Évitez le découvert : les agios coûtent cher.','Demandez à votre conseiller une offre adaptée (ou la gratuité de la carte).','Comparez avec une banque en ligne : carte et tenue de compte souvent gratuites.'])}); }
+  // petits achats
+  if(a.small>=8 && a.smallM>=40){ const sm=depsP.filter(t=>t.montant<15 && catOf(t.categorie)?.groupe==='envies'), by={};
+    for(const t of sm){ const k=t.libelle||t.categorie; by[k]=by[k]||{n:0,v:0}; by[k].n++; by[k].v+=t.montant; }
+    T.push({ic:'☕',an:'steam',t:`${Math.round(a.small)} petits achats par mois`,gain:a.smallM/2*12,gl:'/ an',
+      txt:`Les dépenses de moins de 15 € représentent ${eur(a.smallM)} par mois. En supprimer la moitié = ${eur(a.smallM/2)} de plus chaque mois.`,
+      more:`<div class="dd-ops">${Object.entries(by).sort((x,y)=>y[1].v-x[1].v).slice(0,8).map(([k,o])=>`<div class="row small"><span>${esc(k)} <span class="muted">× ${o.n}</span></span><b>${eur(o.v)}</b></div>`).join('')}</div>`}); }
   // projection
-  if(margin>0){ const i=Math.pow(1.03,1/12)-1, fv=margin*((Math.pow(1+i,120)-1)/i);
-    T.push({ic:'🌱',t:`À ce rythme : ≈ ${eur(fv)} dans 10 ans`,txt:`En plaçant chaque mois vos ${eur(margin)} d'excédent à 3 % par an. <button class="link" onclick="go('sim')">Faire mes simulations ›</button>`}); }
+  if(margin>0){ const i=Math.pow(1.03,1/12)-1, fv=n=>margin*((Math.pow(1+i,n*12)-1)/i);
+    T.push({ic:'🌱',an:'grow',t:`À ce rythme : ≈ ${eur(fv(10))} dans 10 ans`,
+      txt:`En plaçant chaque mois vos ${eur(margin)} d'excédent à 3 % par an.`,
+      more:`<div class="dd-tbl">${[1,3,5,10,20].map(n=>`<div class="row small"><span>Dans ${n} an${n>1?'s':''}</span><span>versé ${eur(margin*12*n)} · <b class="pos">${eur(fv(n))}</b></span></div>`).join('')}</div><p class="small muted">Hypothèse de 3 % par an, hors frais et impôts ; à titre indicatif.</p>`,
+      act:{label:'Faire mes simulations',sim:Math.round(margin)}}); }
   return T;
+}
+// actions des conseils (délégation de clic sur l'écran Analyse)
+function tipAction(b){ const d=b.dataset;
+  if(d.go) return go(d.go);
+  if(d.budget){ S.budgets[d.budget]=+d.v; save(); toast(`Budget « ${d.budget} » fixé à ${eur(+d.v)}.`); return; }
+  if(d.goal){ if(S.goals.some(g=>g.nom===d.goal)) return toast(`L'objectif « ${d.goal} » existe déjà.`);
+    S.goals.push({id:uid(),nom:d.goal,cible:+d.cible,actuel:+(d.actuel||0),echeance:addMonths(ym(new Date().toISOString()),+d.mois||12)}); save();
+    toast(`Objectif « ${d.goal} » créé 🎯`); return; }
+  if(d.sim){ go('sim'); const f=$('#simForm'); f.m.value=d.sim; f.r.value=3; renderSim(); }
 }
 function renderAnalysis(){
   const a=analyze(anaN), tips=buildTips(a), el=$('#anaBody');
@@ -1226,12 +1366,16 @@ function renderAnalysis(){
   el.innerHTML = `<div class="grid g4">${kp.map(([l,v,s])=>`<div class="card kpi"><div class="lbl">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join('')}</div>
   <div class="card" style="margin-top:16px">
     <div class="row" style="align-items:center;flex-wrap:wrap"><h2 style="margin:0">💡 Mes conseils</h2>${gains>0?`<span class="gainall">Jusqu'à <b>${eur(gains)}</b> / an à gagner</span>`:''}</div>
-    <div class="advs">${tips.map(t=>`<div class="adv"><span class="adv-ic">${t.ic}</span><div class="adv-b"><div class="adv-t ${t.lvl||''}">${t.t}</div><div class="adv-x">${t.txt}</div></div>${t.gain?`<span class="gain">+${eur(t.gain)}<small>${t.gl}</small></span>`:''}</div>`).join('')}</div>
+    <div class="advs">${tips.map((t,i)=>{ const A=t.act, attrs=A?Object.entries(A).filter(([k])=>k!=='label').map(([k,v])=>`data-${k}="${esc(v)}"`).join(' '):'';
+      return `<details class="advd"${i===0?' open':''}><summary class="adv"><span class="adv-ic an-${t.an||'bounce'}" style="animation-delay:${(i*.35).toFixed(2)}s">${t.ic}</span>
+        <div class="adv-b"><div class="adv-t ${t.lvl||''}">${t.t}</div><div class="adv-x">${t.txt}</div></div>
+        ${t.gain?`<span class="gain">+${eur(t.gain)}<small>${t.gl}</small></span>`:''}<span class="adv-chev">›</span></summary>
+        <div class="dd">${t.more||''}${A?`<button class="btn primary dd-act" ${attrs}>${A.label}</button>`:''}</div></details>`; }).join('')}</div>
     <p class="small muted" style="margin:10px 0 0">Conseils généraux calculés à partir de vos opérations ; ils ne remplacent pas l'avis d'un conseiller financier.</p>
   </div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>Prélèvements récurrents <small>${a.rec.length?`${eur(recTot)} / mois · ${eur(recTot*12)} / an`:''}</small></h2>
-      ${a.rec.length?`<div class="tblwrap"><table class="small"><tbody>${a.rec.map(r=>`<tr><td><div class="lib"><span class="av">${catIcon(r.cat)}</span><span>${esc(r.nom)}<br><span class="muted">${esc(r.cat)} · vu ${r.mois} mois</span></span></div></td><td class="num"><b>${eur2(r.montant)}</b><br><span class="muted">${eur(r.annuel)} / an</span></td></tr>`).join('')}</tbody></table></div>`
+      ${a.rec.length?`<div class="tblwrap"><table class="small"><tbody>${a.rec.map(r=>`<tr><td><div class="lib"><span class="av">${catIcon(r.cat)}</span><span>${esc(r.nom)}<br><span class="muted">${esc(r.cat)} · ${r.manual?"ajoutée par vous":`vu ${r.mois} mois`}</span></span></div></td><td class="num"><b>${eur2(r.montant)}</b><br><span class="muted">${eur(r.annuel)} / an</span></td></tr>`).join('')}</tbody></table></div>`
         :'<div class="empty">Aucun prélèvement récurrent détecté (il faut au moins 2 mois d\'opérations).</div>'}</div>
     <div class="card"><h2>Évolution des dépenses <small>${a.before.length?`${monthLabel(a.ref)} vs moyenne`:''}</small></h2>
       ${a.evo.length?a.evo.map(e=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span><span class="ci">${catIcon(e.c)}</span>${esc(e.c)}<br><span class="muted">habituellement ${eur(e.base)} / mois</span></span>
@@ -1462,6 +1606,7 @@ function go(v){ view=v;
   // rubriques accessibles seulement par les cartes de l'accueil : bouton « ‹ Accueil »
   $('#backHome').classList.toggle('hide', v==='dash' || !!document.querySelector(`#nav [data-v="${v}"]`));
   document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!=='v-'+v)); scrollTo(0,0); render(); }
+$('#anaBody').addEventListener('click',e=>{ const b=e.target.closest('.dd-act'); if(b){ e.preventDefault(); tipAction(b); } });
 $('#anaSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(b){ anaN=+b.dataset.n; renderAnalysis(); } });
 // accès discret à « Données » : double-clic (ordinateur) ou double-tap (téléphone) sur le logo, depuis l'accueil
 let logoTap=0;
