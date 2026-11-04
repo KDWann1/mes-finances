@@ -492,6 +492,12 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
       </form>
     </div>
     <div class="card">
+      <h2>Mois budgétaire</h2>
+      <p class="small muted">Votre salaire arrive en fin de mois et finance le mois suivant : les revenus reçus à partir de ce jour sont comptés pour le mois suivant (les dépenses restent dans leur mois).</p>
+      <label class="small">Revenus reçus à partir du
+        <select id="shiftDay"><option value="0">— désactivé (mois calendaire)</option></select> comptés pour le mois suivant</label>
+    </div>
+    <div class="card">
       <h2>Démarrer</h2>
       <div class="toolbar">
         <button class="btn" onclick="loadDemo()">Charger des données de démonstration</button>
@@ -613,9 +619,13 @@ const CAT_ICONS = {'Salaire':'💼','Primes':'🎁','Autres revenus':'💶','Log
   'Santé':'🩺','Assurances':'🛡️','Restaurants & sorties':'🍽️','Shopping':'🛍️','Loisirs & abonnements':'🎬','Voyages':'✈️','Épargne & investissement':'🐷','Divers':'📦'};
 const catIcon = n => CAT_ICONS[n] || '🏷️';
 const isSaving = t => t.type==='depense' && catOf(t.categorie)?.groupe==='epargne';
+/* Mois budgétaire : un revenu reçu à partir du jour de bascule (25 par défaut) finance le mois suivant.
+   Ex. salaire versé le 28/10 → compté en novembre. Les dépenses restent dans le mois de leur date. */
+const shiftDay = () => S.shiftDay===undefined ? 25 : +S.shiftDay;   // 0 = désactivé
+function bm(t){ const m=ym(t.date), d=shiftDay(); return t.type==='revenu' && d && +t.date.slice(8)>=d ? addMonths(m,1) : m; }
 function monthTotals(m){
   let rev=0,dep=0,ep=0;
-  for(const t of S.tx) if(ym(t.date)===m){ if(t.type==='revenu') rev+=t.montant; else if(isSaving(t)) ep+=t.montant; else dep+=t.montant; }
+  for(const t of S.tx) if(bm(t)===m){ if(t.type==='revenu') rev+=t.montant; else if(isSaving(t)) ep+=t.montant; else dep+=t.montant; }
   return {rev,dep,ep,solde:rev-dep-ep,epargne:rev-dep};
 }
 
@@ -698,7 +708,7 @@ function renderDash(){
   const w = S.assets.length ? wealthAt(m) : null;
   $('#kpis').innerHTML = `<div class="hero">
     <div class="hero-main">
-      <div class="hero-lbl">Reste après épargne · ${monthLabel(m)}</div>
+      <div class="hero-lbl">Reste après épargne · ${monthLabel(m)}${shiftDay()?`<br><span style="opacity:.8;font-weight:400">revenus reçus du ${shiftDay()} ${monthLabel(addMonths(m,-1)).split(' ')[0]} au ${shiftDay()-1} ${monthLabel(m).split(' ')[0]}</span>`:''}</div>
       <div class="hero-val">${eur(t.solde)}</div>
       <div class="hero-chips">
         <span class="chip">↗ Revenus <b>${eur(t.rev)}</b></span>
@@ -738,7 +748,7 @@ function renderDash(){
 
 /* Cartes cliquables de l'accueil : un résumé vivant de chaque rubrique */
 function renderTiles(m,t){
-  const txM=S.tx.filter(x=>ym(x.date)===m), last=txM.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
+  const txM=S.tx.filter(x=>bm(x)===m), last=txM.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
   const spent={}; for(const x of txM) if(x.type==='depense') spent[x.categorie]=(spent[x.categorie]||0)+x.montant;
   const buds=Object.entries(S.budgets).filter(([,b])=>b>0), over=buds.filter(([c,b])=>(spent[c]||0)>b).length;
   const gT=S.goals.reduce((s,g)=>s+g.cible,0), gA=S.goals.reduce((s,g)=>s+Math.min(g.actuel,g.cible),0);
@@ -794,12 +804,12 @@ function fillCatSelects(){
 function renderTx(){
   fillCatSelects();
   const q=$('#txSearch').value.toLowerCase(), c=$('#txCat').value, all=$('#txAll').checked, m=curMonth();
-  const list=S.tx.filter(t=>(all||ym(t.date)===m)&&(!c||t.categorie===c)&&(!q||(t.libelle||'').toLowerCase().includes(q)))
+  const list=S.tx.filter(t=>(all||bm(t)===m)&&(!c||t.categorie===c)&&(!q||(t.libelle||'').toLowerCase().includes(q)))
     .sort((a,b)=>b.date.localeCompare(a.date));
   const catOpts = t => S.cats.filter(x=>x.type===t.type).map(x=>`<option ${x.nom===t.categorie?'selected':''}>${esc(x.nom)}</option>`).join('');
   $('#txBody').innerHTML = list.length ? list.map(t=>`<tr>
     <td>${new Date(t.date+'T12:00').toLocaleDateString('fr-FR')}</td>
-    <td><div class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle)||'<span class="muted">Sans libellé</span>'}${t.rec?' <span class="tag">récurrent</span>':''}</span></div></td>
+    <td><div class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle)||'<span class="muted">Sans libellé</span>'}${t.rec?' <span class="tag">récurrent</span>':''}${bm(t)!==ym(t.date)?` <span class="tag" title="Reçu à partir du ${shiftDay()} : compté pour le mois suivant">compté en ${monthLabel(bm(t)).split(' ')[0]}</span>`:''}</span></div></td>
     <td class="tx-cat"><select data-cat="${t.id}">${catOpts(t)}</select></td>
     <td class="num ${t.type==='revenu'?'pos':''}">${t.type==='revenu'?'+':'−'}${eur2(t.montant)}</td>
     <td class="num"><button class="link" data-del="${t.id}" title="Supprimer">✕</button></td></tr>`).join('')
@@ -1140,7 +1150,7 @@ const median=a=>{ if(!a.length) return 0; const s=[...a].sort((x,y)=>x-y), h=s.l
 const r10=v=>Math.max(10,Math.round(v/10)*10);
 function analyze(n){
   const end=curMonth(), months=[...Array(n)].map((_,i)=>addMonths(end,i-n+1)), set=new Set(months);
-  const tx=S.tx.filter(t=>set.has(ym(t.date))), deps=tx.filter(t=>t.type==='depense'&&!isSaving(t));
+  const tx=S.tx.filter(t=>set.has(bm(t))), deps=tx.filter(t=>t.type==='depense'&&!isSaving(t));
   const per=months.map(m=>monthTotals(m)), activeMs=months.filter((m,i)=>per[i].rev||per[i].dep||per[i].ep), active=activeMs.length||1;
   const sum=k=>per.reduce((s,p)=>s+p[k],0), avg={rev:sum('rev')/active,dep:sum('dep')/active,ep:sum('ep')/active};
   avg.rate=avg.rev?(avg.rev-avg.dep)/avg.rev:0;
@@ -1251,6 +1261,8 @@ function renderSettings(){
       <td>${c.type==='depense'?`<select data-grp="${i}">${['besoins','envies','epargne'].map(g=>`<option value="${g}" ${c.groupe===g?'selected':''}>${{besoins:'Besoin',envies:'Envie',epargne:'Épargne'}[g]}</option>`).join('')}</select>`:''}</td>
       <td class="num"><button class="link" data-cdel="${i}">✕</button></td></tr>`).join('')+'</tbody></table></div>';
   $('#theme').value=S.theme||'';
+  const sd=$('#shiftDay'); if(sd.options.length<2) for(let d=15;d<=31;d++) sd.add(new Option(d+' du mois',d));
+  sd.value=String(shiftDay());
   const nr=Object.keys(S.rules).length;
   $('#rulesInfo').innerHTML = nr ? `${nr} règle(s) de catégorisation apprise(s) de vos corrections. <button class="link" onclick="if(confirm('Oublier les règles apprises ?')){S.rules={};save();renderSettings();}">Réinitialiser</button>` : '';
 }
@@ -1261,6 +1273,7 @@ $('#catEdit').addEventListener('click',e=>{ const i=e.target.dataset.cdel; if(i=
 $('#catForm').onsubmit=e=>{ e.preventDefault(); const f=e.target, nom=f.nom.value.trim(); if(catOf(nom)) return alert('Cette catégorie existe déjà.');
   S.cats.push({nom,type:f.type.value,groupe:f.type.value==='depense'?f.groupe.value:undefined}); f.reset(); save(); renderSettings(); };
 $('#theme').onchange=e=>{ S.theme=e.target.value; save(); applyTheme(); };
+$('#shiftDay').onchange=e=>{ S.shiftDay=+e.target.value; save(); toast(S.shiftDay?`Revenus reçus à partir du ${S.shiftDay} comptés pour le mois suivant.`:'Mois calendaire : chaque opération compte dans le mois de sa date.'); };
 function applyTheme(){ if(S.theme) document.documentElement.dataset.theme=S.theme; else delete document.documentElement.dataset.theme; }
 
 /* ===================== Import / export ===================== */
