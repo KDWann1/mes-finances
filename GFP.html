@@ -361,7 +361,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
     <button data-v="pay"><span class="ic">💼</span><span class="lb">Salaire</span><span class="sh">Salaire</span></button>
   </nav>
   <span class="spacer"></span>
-  <input type="month" id="month" title="Mois affiché">
+  <select id="month" title="Mois affiché"></select>
   <button class="lockbtn" onclick="lockNow()" title="Verrouiller maintenant">🔒</button>
 </div></header>
 
@@ -1955,7 +1955,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await forceUpdate(); }
 /* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
-const APP_V=27;
+const APP_V=28;
 document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
 // Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
 async function forceUpdate(){
@@ -1969,7 +1969,18 @@ async function checkOnlineVersion(){
   try{ const t=await (await fetch('sw.js?z='+Date.now(),{cache:'no-store'})).text(); const v=+(t.match(/gfp-v(\d+)/)||[])[1];
     if(v>APP_V) $('#updBar').classList.remove('hide'); }catch(_){} }
 checkOnlineVersion(); document.addEventListener('visibilitychange',()=>{ if(!document.hidden) checkOnlineVersion(); });
-$('#month').value=month; $('#month').onchange=e=>{ if(e.target.value){ month=e.target.value; render(); } };
+/* Sélecteur de mois : les 12 derniers mois (du plus récent au plus ancien), chacun une seule fois.
+   Un mois plus ancien choisi ailleurs (ex. « Voir octobre ») est ajouté à la liste au besoin. */
+function fillMonthSelect(){
+  const sel=$('#month'), now=ym(new Date().toISOString()), list=[...Array(12)].map((_,i)=>addMonths(now,-i));
+  if(!list.includes(month)) list.push(month);
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  sel.innerHTML=list.sort().reverse().map(x=>`<option value="${x}">${cap(monthLabel(x))}</option>`).join('');
+  sel.value=month; }
+fillMonthSelect();
+$('#month').onchange=e=>{ if(e.target.value){ month=e.target.value; render(); } };
+// si le mois affiché change ailleurs dans l'application, la liste suit
+const _render=render; render=function(){ if($('#month').value!==month) fillMonthSelect(); _render(); };
 function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,savings:renderSavings,analysis:renderAnalysis,sim:renderSim,settings:renderSettings})[view](); }
 let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(render,150); });
 $('#txForm').date.value=new Date().toISOString().slice(0,10);
