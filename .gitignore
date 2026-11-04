@@ -1,3 +1,14 @@
 .claude/
 *.json
 !manifest.webmanifest
+*.pdf
+*.jpg
+*.jpeg
+*.png
+!icon-192.png
+!icon-512.png
+*.csv
+*.ofx
+*.qif
+*.xlsx
+*.xls
