@@ -1088,7 +1088,8 @@ function renderSavings(){
   $('#svProg').innerHTML = pl.length ? pl.map(r=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(r.nom)}<br><span class="muted">vers le ${r.day} du mois${r.manual?' · ajoutée':''}${r.on?'':' · décochée'}</span></span><b>${eur2(r.montant)} / mois</b></div>`).join('')
     : '<div class="empty">Aucun versement régulier détecté (il faut au moins 2 mois de relevés).<br><span class="small">Vous pouvez en ajouter un dans Budgets → « Ajouter une dépense habituelle », catégorie Épargne.</span></div>';
   $('#svAcc').innerHTML = s.accs.length ? s.accs.map(a=>{ const v=assetVal(a,m), pv=assetVal(a,addMonths(m,-1)); return `<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(a.nom)}<br><span class="muted">${ASSET_TYPES[a.type]?.l||''}</span></span><span style="text-align:right"><b>${eur2(v)}</b><br><span class="${v>=pv?'pos':'neg'}">${v-pv?(v>pv?'+':'')+eur(v-pv)+' sur 1 mois':''}</span></span></div>`; }).join('')
-    : '<div class="empty">Aucun compte d\'épargne suivi.<br><span class="small">Réimportez votre dernier relevé PDF (Données → double-clic sur le logo de l\'accueil) : les soldes de vos comptes d\'épargne imprimés sur le relevé s\'ajouteront ici. Vous pouvez aussi les saisir dans Patrimoine.</span></div>';
+    : `<div class="empty">Aucun compte d'épargne suivi pour l'instant.<br><span class="small">Importez votre dernier relevé PDF : les soldes de vos comptes d'épargne (livret, PEL…) imprimés dessus s'ajouteront ici. Les opérations déjà importées sont ignorées.</span>
+      <div style="margin-top:12px"><label class="btn primary">📄 Importer mon dernier relevé…<input type="file" accept="application/pdf,.pdf,.ofx,.qfx,.qif,.csv,.txt" class="hide" onchange="window.IMPBACK='savings';go('settings');importBank(this)"></label></div></div>`;
   const ms=[...Array(12)].map((_,i)=>addMonths(m,i-11));
   barChart($('#chSv'), ms.map(x=>monthLabel(x,true)), [{name:'Épargné',color:'var(--s3)',values:ms.map(x=>monthTotals(x).ep)}]);
 }
@@ -1818,7 +1819,8 @@ function commitImport(){ const fresh=IMP.rows.filter(r=>!r.dup);
   $('#csvMsg').innerHTML=`<span class="pos">${fresh.length} opération(s) importée(s).</span>`
     + (fb.created||fb.raised ? ` Budgets mis à jour avec vos dépenses récurrentes : ${fb.created} créé(s), ${fb.raised} complété(s).` : '')
     + (sv ? ` 🐷 ${sv} compte${sv>1?'s':''} d'épargne mis à jour dans Patrimoine.` : '')
-    + ` Corrigez les catégories dans l'onglet Opérations : l'application retient vos corrections pour les prochains imports.`; }
+    + ` Corrigez les catégories dans l'onglet Opérations : l'application retient vos corrections pour les prochains imports.`;
+  if(window.IMPBACK){ const v=window.IMPBACK; window.IMPBACK=null; go(v); toast(`Import terminé${sv?` : ${sv} compte${sv>1?'s':''} d'épargne mis à jour 🐷`:''}.`); } }
 /* Soldes des comptes d'épargne lus sur le relevé → Patrimoine (un solde par compte et par mois) */
 const normName=s=>String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9]+/g,' ').trim();
 /* Reconnaît un compte d'épargne à partir de son libellé, même abrégé (« LIV A », « LIV DEV DUR », « CPTE EPARGNE »,
@@ -1905,7 +1907,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await forceUpdate(); }
 /* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
-const APP_V=22;
+const APP_V=23;
 document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
 // Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
 async function forceUpdate(){
