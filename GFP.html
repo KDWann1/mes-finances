@@ -51,10 +51,10 @@ main{max-width:1180px;margin:0 auto;padding:20px 16px 60px}
 .kpi .sub{color:var(--muted);font-size:12px;margin-top:2px}
 .pos{color:var(--good)} .neg{color:var(--bad)}
 .toolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:16px}
-input,select,button.btn,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
+input,select,.btn,textarea{font:inherit;color:var(--text);background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px}
 input:focus,select:focus{outline:2px solid var(--accent);outline-offset:-1px}
-button.btn{cursor:pointer;background:var(--surface-2)}
-button.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn{cursor:pointer;background:var(--surface-2);display:inline-block}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 button.danger{color:var(--bad)}
 button.link{background:none;border:0;color:var(--accent);cursor:pointer;padding:2px 4px;font:inherit}
 table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
@@ -105,6 +105,8 @@ nav .ic,nav .sh{display:none}
   #fab{display:flex;position:fixed;right:16px;bottom:calc(76px + env(safe-area-inset-bottom));z-index:7;width:56px;height:56px;border-radius:50%;
        border:0;background:var(--accent);color:#fff;font-size:30px;line-height:1;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer}
   .tx-cat select{max-width:100%}
+  .hwrap{flex-wrap:nowrap} h1{white-space:nowrap;font-size:16px} #month{width:155px;min-width:0;padding:6px}
+  #v-pay td{white-space:nowrap}
   /* opérations en liste compacte : libellé + montant, puis date, puis catégorie */
   #v-tx thead{display:none}
   #txBody tr{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:10px 0;border-bottom:1px solid var(--border)}
@@ -145,6 +147,7 @@ nav .ic,nav .sh{display:none}
     <button data-v="budget"><span class="ic">🎯</span><span class="lb">Budgets</span><span class="sh">Budgets</span></button>
     <button data-v="goals"><span class="ic">🏁</span><span class="lb">Objectifs</span><span class="sh">Objectifs</span></button>
     <button data-v="wealth"><span class="ic">🏦</span><span class="lb">Patrimoine</span><span class="sh">Patrimoine</span></button>
+    <button data-v="pay"><span class="ic">💼</span><span class="lb">Salaire</span><span class="sh">Salaire</span></button>
     <button data-v="sim"><span class="ic">📈</span><span class="lb">Simulateur</span><span class="sh">Simuler</span></button>
     <button data-v="settings"><span class="ic">⚙️</span><span class="lb">Données</span><span class="sh">Données</span></button>
   </nav>
@@ -235,6 +238,43 @@ nav .ic,nav .sh{display:none}
       <label>Solde actuel (€)<input type="number" name="valeur" step="0.01" min="0" required></label>
       <button class="btn primary">Ajouter</button>
     </form>
+  </div>
+</section>
+
+<!-- SALAIRE -->
+<section id="v-pay" class="hide">
+  <div class="grid g4" id="payKpis"></div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card">
+      <h2>Ajouter un bulletin de salaire</h2>
+      <p class="small muted">Le PDF est lu <b>sur cet appareil uniquement</b> : il n'est ni envoyé ni conservé, seuls les montants vérifiés par vous sont enregistrés (chiffrés).</p>
+      <div class="toolbar">
+        <label class="btn primary">Choisir le bulletin (PDF)…<input type="file" accept="application/pdf,.pdf" class="hide" onchange="readPayslip(this)"></label>
+        <button class="btn" onclick="openPayForm({})">Saisir à la main</button>
+      </div>
+      <p id="payMsg" class="small"></p>
+      <form id="payForm" class="form hide">
+        <label>Mois du bulletin<input type="month" name="mois" required></label>
+        <label>Date de versement<input type="date" name="date"></label>
+        <label>Salaire brut (€)<input type="number" step="0.01" min="0" name="brut"></label>
+        <label>Net avant impôt (€)<input type="number" step="0.01" min="0" name="netAvant"></label>
+        <label>Impôt prélevé à la source (€)<input type="number" step="0.01" min="0" name="pas"></label>
+        <label>Taux de prélèvement (%)<input type="number" step="0.1" min="0" name="taux"></label>
+        <label>Net à payer (€)<input type="number" step="0.01" min="0" name="net" required></label>
+        <label>Net imposable (€)<input type="number" step="0.01" min="0" name="netImposable"></label>
+        <label>Dont primes / variable (€)<input type="number" step="0.01" min="0" name="primes"></label>
+        <label style="grid-column:span 2"><span><input type="checkbox" name="addTx" checked> Créer l'opération « Salaire » (net à payer) dans les transactions</span></label>
+        <div class="toolbar" style="margin:0"><button class="btn primary">Enregistrer</button><button type="button" class="btn" onclick="closePayForm()">Annuler</button></div>
+      </form>
+      <details id="payRaw" class="small hide" style="margin-top:10px"><summary class="muted">Voir le texte lu dans le PDF</summary><pre style="white-space:pre-wrap;max-height:220px;overflow:auto"></pre></details>
+    </div>
+    <div class="card"><h2>Évolution de la rémunération</h2>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Brut</span><span><i style="background:var(--s3)"></i>Net à payer</span></div>
+      <div id="chPay"></div></div>
+  </div>
+  <div class="card" style="margin-top:16px">
+    <h2>Mes bulletins</h2>
+    <div class="tblwrap"><table><thead><tr><th>Mois</th><th class="num">Brut</th><th class="num">Net avant impôt</th><th class="num">Impôt (taux)</th><th class="num">Net à payer</th><th class="num">Net imposable</th><th></th></tr></thead><tbody id="payBody"></tbody></table></div>
   </div>
 </section>
 
@@ -336,7 +376,7 @@ const RULES = [
   [/airbnb|booking|h[oô]tel|air france|easyjet|ryanair/i,'Voyages'],[/livret|pea|assurance.vie|epargne|bourse/i,'Épargne & investissement']
 ];
 let S = blank();
-function blank(){ return {tx:[], cats:structuredClone(DEFAULT_CATS), budgets:{}, goals:[], rec:[], rules:{}, assets:[], snaps:{}, theme:''}; }
+function blank(){ return {tx:[], cats:structuredClone(DEFAULT_CATS), budgets:{}, goals:[], rec:[], rules:{}, assets:[], snaps:{}, payslips:[], theme:''}; }
 const ASSET_TYPES = {
   courant:{l:'Compte courant',k:'actif',g:'Liquidités'}, livret:{l:'Livret / épargne réglementée',k:'actif',g:'Épargne sécurisée'},
   av:{l:'Assurance-vie',k:'actif',g:'Placements financiers'}, pea:{l:'PEA / compte-titres',k:'actif',g:'Placements financiers'},
@@ -669,6 +709,106 @@ $('#wBody').addEventListener('click',e=>{ const id=e.target.dataset.adel; if(!id
 $('#assetForm').onsubmit=e=>{ e.preventDefault(); const f=e.target, a={id:uid(),nom:f.nom.value.trim(),type:f.type.value};
   S.assets.push(a); S.snaps[a.id]={[curMonth()]:+f.valeur.value}; f.nom.value=''; f.valeur.value=''; save(); renderWealth(); };
 
+/* ---------- Bulletins de salaire ---------- */
+const PDFJS = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/';
+function loadPdfJs(){
+  if(window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+  return new Promise((ok,ko)=>{ const s=document.createElement('script'); s.src=PDFJS+'pdf.min.js'; s.crossOrigin='anonymous';
+    s.onload=()=>{ pdfjsLib.GlobalWorkerOptions.workerSrc=PDFJS+'pdf.worker.min.js'; ok(pdfjsLib); };
+    s.onerror=()=>ko(new Error('Lecteur PDF indisponible (connexion internet requise pour lire un PDF).')); document.head.appendChild(s); }); }
+async function pdfLines(buf){
+  const lib=await loadPdfJs(); let doc, password;
+  for(;;){ try{ doc=await lib.getDocument({data:new Uint8Array(buf.slice(0)),password}).promise; break; }
+    catch(e){ if(e.name!=='PasswordException') throw e; password=prompt(e.code===2?'Mot de passe incorrect. Mot de passe du PDF :':'Ce PDF est protégé. Mot de passe :'); if(password==null) throw new Error('Lecture annulée.'); } }
+  const lines=[];
+  for(let p=1;p<=doc.numPages;p++){
+    const items=(await (await doc.getPage(p)).getTextContent()).items.filter(i=>i.str.trim()), rows=[];
+    for(const it of items){ const y=it.transform[5], x=it.transform[4]; let r=rows.find(r=>Math.abs(r.y-y)<3); if(!r) rows.push(r={y,cells:[]}); r.cells.push({x,s:it.str}); }
+    rows.sort((a,b)=>b.y-a.y).forEach(r=>lines.push(r.cells.sort((a,b)=>a.x-b.x).map(c=>c.s.trim()).join(' ').replace(/\s+/g,' ')));
+  }
+  doc.destroy(); return lines; }
+const AMT=/-?\d{1,3}(?:[   .]\d{3})*,\d{2}(?!\d)|-?\d+\.\d{2}(?!\d)/g;
+const amountsIn = s => (s.match(AMT)||[]).map(parseNum);
+const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+function parsePayslip(lines){
+  const find=(res,{pick='last',exclude=/cumul|annuel|ann[ée]e|plafond/i}={})=>{
+    for(const re of res) for(let i=0;i<lines.length;i++){ const l=lines[i], m=l.match(re); if(!m||exclude.test(l)) continue;
+      let a=amountsIn(l.slice(m.index+m[0].length)); if(!a.length && lines[i+1]) a=amountsIn(lines[i+1]);
+      if(a.length) return {v:Math.abs(pick==='first'?a[0]:a.at(-1)), line:l}; }
+    return null; };
+  const r={}, txt=lines.join('\n');
+  r.netAvant = find([/net\s*[àa]\s*payer\s*avant\s*imp[ôo]t/i,/net\s*avant\s*imp[ôo]t/i])?.v;
+  r.net = find([/net\s*pay[ée]/i,/net\s*[àa]\s*payer(?!\s*avant)/i,/net\s*vers[ée]/i])?.v;
+  r.brut = find([/salaire\s*brut/i,/total\s*brut/i,/r[ée]mun[ée]ration\s*brute/i,/^brut\b/i])?.v;
+  r.netImposable = find([/net\s*imposable/i,/net\s*fiscal/i])?.v;
+  const pas = find([/imp[ôo]t\s*sur\s*le\s*revenu\s*pr[ée]lev[ée]/i,/pr[ée]l[èe]vement\s*[àa]\s*la\s*source/i,/imp[ôo]t\s*sur\s*le\s*revenu/i]);
+  if(pas){ r.pas=pas.v; const t=pas.line.match(/(\d{1,2}[.,]\d{1,3})\s*%/); if(t) r.taux=parseNum(t[1]); else { const a=amountsIn(pas.line); if(a.length>=3 && a.at(-2)<60) r.taux=a.at(-2); } }
+  if(r.taux==null && r.pas && r.netImposable) r.taux=Math.round(r.pas/r.netImposable*1000)/10;
+  if(r.netAvant==null && r.net!=null && r.pas!=null) r.netAvant=Math.round((r.net+r.pas)*100)/100;
+  if(r.net==null && r.netAvant!=null && r.pas!=null) r.net=Math.round((r.netAvant-r.pas)*100)/100;
+  r.primes = find([/prime|gratification|13[eè]me\s*mois|bonus|variable/i],{exclude:/cumul|anciennet[ée]\s*$|annuel/i})?.v;
+  const per=txt.match(/p[ée]riode[^\n]*?(\d{2})\/(\d{2})\/(\d{4})[^\n]*?(\d{2})\/(\d{2})\/(\d{4})/i);
+  if(per) r.mois=`${per[6]}-${per[5]}`;
+  else { const m=txt.toLowerCase().normalize('NFC').match(new RegExp('('+MOIS.join('|')+'|fevrier|aout|decembre)\\s+(20\\d{2})'));
+    if(m){ const k={fevrier:'février',aout:'août',decembre:'décembre'}[m[1]]||m[1]; r.mois=`${m[2]}-${String(MOIS.indexOf(k)+1).padStart(2,'0')}`; } }
+  const d=txt.match(/(?:pay[ée]\s*le|paiement\s*(?:le|du)?|date\s*de\s*paiement|vers[ée]\s*le|virement\s*du)\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if(d) r.date=parseDate(d[1]);
+  return r; }
+async function readPayslip(inp){
+  const f=inp.files[0]; if(!f) return; inp.value=''; const msg=$('#payMsg'); msg.innerHTML='Lecture du PDF…';
+  try{ const lines=await pdfLines(await f.arrayBuffer()); const r=parsePayslip(lines);
+    $('#payRaw').classList.remove('hide'); $('#payRaw pre').textContent=lines.join('\n');
+    const found=['brut','netAvant','pas','net','netImposable'].filter(k=>r[k]!=null).length;
+    msg.innerHTML = lines.length ? `<span class="${found>=3?'pos':'neg'}">${found} montant(s) principal(aux) reconnu(s) sur 5.</span> <b>Vérifiez chaque valeur</b> avant d'enregistrer.`
+      : '<span class="neg">Aucun texte lisible : ce PDF est sans doute une image scannée. Saisissez les montants à la main.</span>';
+    openPayForm(r);
+  }catch(e){ msg.innerHTML=`<span class="neg">${esc(e.message||'Impossible de lire ce PDF.')}</span>`; } }
+function openPayForm(r){
+  const f=$('#payForm'); f.reset(); f.classList.remove('hide');
+  for(const k of ['mois','date','brut','netAvant','pas','taux','net','netImposable','primes']) if(r[k]!=null) f[k].value=r[k];
+  if(!f.mois.value) f.mois.value=curMonth();
+  f.addTx.checked = !salaryTxFor(f.mois.value, r.net); f.mois.focus(); }
+function closePayForm(){ $('#payForm').classList.add('hide'); $('#payRaw').classList.add('hide'); $('#payMsg').textContent=''; }
+// une opération Salaire existe-t-elle déjà ce mois-ci (par ex. importée depuis la banque) ?
+function salaryTxFor(m,net){ return S.tx.find(t=>t.type==='revenu' && t.categorie==='Salaire' && (ym(t.date)===m || ym(t.date)===addMonths(m,1)) && (!net || Math.abs(t.montant-net)<1)); }
+$('#payForm').onsubmit=e=>{ e.preventDefault(); const f=e.target, n=k=>f[k].value===''?null:+f[k].value;
+  const p={id:uid(),mois:f.mois.value,date:f.date.value||null,brut:n('brut'),netAvant:n('netAvant'),pas:n('pas'),taux:n('taux'),net:n('net'),netImposable:n('netImposable'),primes:n('primes')};
+  const dup=S.payslips.find(x=>x.mois===p.mois);
+  if(dup && !confirm(`Un bulletin existe déjà pour ${monthLabel(p.mois)}. Le remplacer ?`)) return;
+  if(dup) S.payslips=S.payslips.filter(x=>x!==dup);
+  if(f.addTx.checked){ const ex=salaryTxFor(p.mois,p.net);
+    if(!ex || confirm(`Une opération Salaire de ${eur2(ex.montant)} existe déjà (${ex.date.split('-').reverse().join('/')}). En créer quand même une autre ?`)){
+      const t={id:uid(),date:p.date||p.mois+'-28',type:'revenu',montant:p.net,categorie:'Salaire',libelle:'Salaire '+monthLabel(p.mois),payslip:p.id}; S.tx.push(t); p.tx=t.id; } }
+  S.payslips.push(p); save(); closePayForm(); $('#payMsg').innerHTML=`<span class="pos">Bulletin de ${monthLabel(p.mois)} enregistré.</span>`; renderPay(); };
+function renderPay(){
+  const ps=S.payslips.slice().sort((a,b)=>a.mois.localeCompare(b.mois)), last=ps.at(-1);
+  const y=curMonth().slice(0,4), ofYear=ps.filter(p=>p.mois.startsWith(y)), sum=k=>ofYear.reduce((s,p)=>s+(p[k]||0),0);
+  const yearAgo=last && ps.find(p=>p.mois===addMonths(last.mois,-12));
+  const evo=(a,b)=>a&&b?`<span class="${a>=b?'pos':'neg'}">${a>=b?'+':'−'}${Math.abs((a-b)/b*100).toFixed(1).replace('.',',')} %</span> sur 1 an`:'';
+  $('#payKpis').innerHTML = [
+    ['Dernier net à payer', last?eur(last.net):'—', last?`${monthLabel(last.mois)} ${evo(last.net,yearAgo?.net)}`:'Ajoutez un bulletin'],
+    ['Dernier brut', last?.brut?eur(last.brut):'—', last?.brut?evo(last.brut,yearAgo?.brut)||`Ratio net / brut : ${Math.round(last.netAvant/last.brut*100)||'—'} %`:''],
+    [`Brut cumulé ${y}`, ofYear.length?eur(sum('brut')):'—', ofYear.length?`${ofYear.length} bulletin(s) · net perçu ${eur(sum('net'))}`:''],
+    ['Impôt prélevé '+y, ofYear.length?eur(sum('pas')):'—', last?.taux!=null?`Taux actuel : ${String(last.taux).replace('.',',')} %`:'']
+  ].map(([l,v,s])=>`<div class="card kpi"><div class="lbl">${l}</div><div class="val">${v}</div><div class="sub">${s}</div></div>`).join('');
+  const el=$('#chPay');
+  if(ps.length<2) el.innerHTML='<div class="empty">Le graphique apparaît à partir de 2 bulletins.</div>';
+  else { const first=ps[0].mois, months=[]; for(let m=first; m<=last.mois; m=addMonths(m,1)) months.push(m);
+    let pb=0,pn=0; const val=(m,k,prev)=>{ const p=ps.find(x=>x.mois===m); return p&&p[k]!=null?p[k]:prev; };
+    lineChart(el, months.map(m=>monthLabel(m,true)+' '+m.slice(2,4)), [
+      {name:'Brut',color:'var(--s1)',values:months.map(m=>pb=val(m,'brut',pb))},
+      {name:'Net à payer',color:'var(--s3)',values:months.map(m=>pn=val(m,'net',pn))}]); }
+  const n=v=>v==null?'<span class="muted">—</span>':eur2(v);
+  $('#payBody').innerHTML = ps.length ? ps.slice().reverse().map(p=>`<tr><td>${monthLabel(p.mois)}${p.primes?` <span class="tag">prime ${eur(p.primes)}</span>`:''}</td>
+    <td class="num">${n(p.brut)}</td><td class="num">${n(p.netAvant)}</td><td class="num">${n(p.pas)}${p.taux!=null?` <span class="muted small">(${String(p.taux).replace('.',',')} %)</span>`:''}</td>
+    <td class="num"><b>${n(p.net)}</b></td><td class="num">${n(p.netImposable)}</td><td class="num"><button class="link" data-pdel="${p.id}" title="Supprimer">✕</button></td></tr>`).join('')
+    : '<tr><td colspan="7" class="empty">Aucun bulletin enregistré.</td></tr>';
+}
+$('#payBody').addEventListener('click',e=>{ const id=e.target.dataset.pdel; if(!id) return; const p=S.payslips.find(x=>x.id===id);
+  if(!confirm(`Supprimer le bulletin de ${monthLabel(p.mois)} ?`)) return;
+  if(p.tx && S.tx.some(t=>t.id===p.tx) && confirm('Supprimer aussi l\'opération « Salaire » créée avec ce bulletin ?')) S.tx=S.tx.filter(t=>t.id!==p.tx);
+  S.payslips=S.payslips.filter(x=>x!==p); save(); renderPay(); });
+
 function renderSim(){
   const f=$('#simForm'), c0=+f.c0.value||0, m=+f.m.value||0, r=(+f.r.value||0)/100, n=Math.max(1,Math.min(60,+f.n.value||1)), inf=(+f.inf.value||0)/100;
   const rm=(1+r)**(1/12)-1; let cap=c0, vers=c0; const caps=[c0], verss=[c0];
@@ -824,7 +964,7 @@ $('#nav').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(b) go(b.da
 function quickAdd(){ go('tx'); const f=$('#txForm'); f.date.value=new Date().toISOString().slice(0,10); setTimeout(()=>f.montant.focus(),50); }
 if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
 $('#month').value=month; $('#month').onchange=e=>{ if(e.target.value){ month=e.target.value; render(); } };
-function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,sim:renderSim,settings:renderSettings})[view](); }
+function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,sim:renderSim,settings:renderSettings})[view](); }
 let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(render,150); });
 $('#txForm').date.value=new Date().toISOString().slice(0,10);
 showLock();
