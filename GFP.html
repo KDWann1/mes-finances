@@ -595,7 +595,7 @@ const DEFAULT_CATS = [
 ];
 const RULES = [
   // épargne en premier : « VERSEMENT ASSURANCE VIE » ne doit pas tomber dans Assurances (et « Caisse d'Épargne » n'est pas de l'épargne)
-  [/livret|\bldd[sd]?\b|\blep\b|\bpel\b|\bcel\b|\bpea\b|\bper[ico]?\b|assurance[\s-]*vie|(?<!caisse\s*d.?\s*)[ée]pargne|bourse|versement\s*programm/i,'Épargne & investissement'],
+  [/\bliv(?:ret)?\b|\bcsl\b|\bldd[sd]?\b|\blep\b|\bpel\b|\bcel\b|\bpea\b|\bpee\b|\bperco?\b|\bper[ico]?\b|ass(?:ur)?(?:ance)?[\s.-]*vie|(?<!caisse\s*d.?\s*)[ée]parg(?:ne)?\b|\bepgn\b|bourse|versement\s*programm/i,'Épargne & investissement'],
   [/salaire|paie|virement.*employeur/i,'Salaire'],[/loyer|pr[eê]t immo|syndic|credit immo/i,'Logement'],
   [/carrefour|leclerc|auchan|lidl|intermarch|monoprix|franprix|casino|aldi|super ?u|picard/i,'Alimentation'],
   [/sncf|ratp|navigo|total|esso|shell|bp |uber(?!\s*eats)|parking|p[ée]age|blablacar/i,'Transport'],
@@ -1614,7 +1614,6 @@ function importBank(inp){ const f=inp.files[0]; if(!f) return; inp.value='';
     IMP.file=f.name; showImport(); }); }
 /* Relevé de compte PDF : lignes « date  [date valeur]  libellé  montant(s) », colonnes Débit / Crédit repérées par leur position */
 const DATE_TOKEN=/\b(\d{2})[\/.](\d{2})(?:[\/.](\d{2,4}))?\b/g;
-const SAV_ACC=/livret\s*a\b|livret\s*(?:jeune|bleu|d[ée]veloppement|d.?[ée]pargne)|\bldd[sd]?\b|\blep\b|\bpel\b|\bcel\b|compte\s*(?:sur\s*)?livret|compte\s*d.?\s*[ée]pargne|assurance[\s-]*vie|\bpea\b|\bper[ico]?\b|plan\s*d.?\s*[ée]pargne/i;
 function parseStatement(lines){
   const geo=lines.geo||[], txt=lines.join('\n'), rows=[];
   const xAt=(i,idx)=>{ const g=geo[i]; if(!g) return null; let x=null; for(const s of g) if(s.start<=idx) x=s.x; return x; };
@@ -1655,19 +1654,20 @@ function parseStatement(lines){
       else credit=/vir(?:ement)?\s*(?:sepa\s*)?(?:re[çc]u|de|inst.*re[çc]u)|salaire|paie|remboursement|versement(?!.*(?:livret|assurance|pea|pel|[ée]pargne|programm))|avoir|prestation|caf\b/i.test(lib);
       cur={date:fullDate(m[1],m[2],m[3]), v:credit?a.v:-a.v, lib}; rows.push(cur); cont=0; continue; }
     // encadré « Vos comptes d'épargne » : nom du compte + solde (ligne sans date en tête)
-    if(SAV_ACC.test(l)){ const masked=l.replace(DATE_TOKEN,s=>' '.repeat(s.length)), am=amountsIn(masked).filter(a=>!a.pct);
+    const cs=!/total|report|plafond|taux/i.test(l) && canonSav(l.replace(DATE_TOKEN,' '));
+    if(cs){ const masked=l.replace(DATE_TOKEN,s=>' '.repeat(s.length)), am=amountsIn(masked).filter(a=>!a.pct);
       if(am.length){ const last=am[am.length-1], raw=masked.slice(last.i).match(AMT)?.[0]||'';
-        const nom=masked.slice(0,am[0].i).replace(/n[°o]\s*\S+|\*+\d*|x{3,}\d*|\b\d{5,}\b/gi,' ').replace(/\b(solde|au|disponible|cr[ée]diteur|valeur)\b.*$/i,'').replace(/[\s:–-]+$/,'').replace(/\s+/g,' ').trim();
-        if(nom.length>=3) savings.push({nom, solde:/-$/.test(raw.trim())?-last.v:last.v});
+        const c2=canonSav(masked.slice(0,am[0].i))||cs;   // le nom se lit avant le premier montant
+        savings.push({nom:c2.label, key:c2.key, type:c2.type, solde:/-$/.test(raw.trim())?-last.v:last.v});
         cur=null; continue; } }
     // ligne de suite du libellé (sans date ni montant)
-    if(cur && cont<2 && !amountsIn(l).length && /[a-z]/i.test(l) && l.length<90 && !/page\s*\d|solde|total|suite|iban|bic|vos\s*comptes|comptes?\s*d.?\s*[ée]pargne|synth[eè]se|r[ée]capitul/i.test(l)){ cur.lib=(cur.lib+' '+l.trim()).trim(); cont++; }
+    if(cur && cont<2 && !amountsIn(l).length && /[a-z]/i.test(l) && l.length<90 && !/page\s*\d|solde|total|suite|iban|bic|vos\s*comptes|[ée]pargnes?\b|situation|vos\s*avoirs|synth[eè]se|r[ée]capitul/i.test(l)){ cur.lib=(cur.lib+' '+l.trim()).trim(); cont++; }
     else if(amountsIn(l).length) cur=null;
   }
   const out=rows.filter(r=>r.v && r.date && !isNaN(new Date(r.date)));
   // mois du solde : fin de période du relevé, sinon mois de la dernière opération
   const sm=pEnd || (out.length?ym(out.map(r=>r.date).sort().at(-1)):ym(new Date().toISOString())), seen={};
-  for(const s of savings) seen[normName(s.nom)]={...s,mois:sm,on:true};
+  for(const s of savings) seen[s.key]={...s,mois:sm,on:true};
   out.savings=Object.values(seen);
   return out;
 }
@@ -1719,7 +1719,7 @@ function showImport(){
       ${IMP.rows.slice(0,50).map(r=>`<tr style="${r.dup?'opacity:.45':''}"><td>${r.date.split('-').reverse().join('/')}</td><td>${esc(r.lib)}</td><td>${esc(r.cat)}${r.dup?' <span class="tag">doublon</span>':''}</td><td class="num amt ${r.v>0?'pos':'neg'}">${r.v>0?'+':'−'}${eur2(r.montant)}</td></tr>`).join('')}
       </tbody></table></div>`:`<p class="neg small">${IMP.note?esc(IMP.note):'Aucune opération reconnue : ajustez les colonnes ci-dessus.'}</p>`}
     ${IMP.savings?.length?`<div class="imp-sav"><b>🐷 Comptes d'épargne trouvés sur le relevé</b> <span class="small muted">→ mis à jour dans Patrimoine (solde de ${monthLabel(IMP.savings[0].mois)})</span>
-      ${IMP.savings.map((s,i)=>{ const ex=S.assets.find(a=>normName(a.nom)===normName(s.nom)); return `<label class="fx"><input type="checkbox" data-sav="${i}" ${s.on?'checked':''}>
+      ${IMP.savings.map((s,i)=>{ const ex=S.assets.find(a=>savKey(a.nom)===s.key); return `<label class="fx"><input type="checkbox" data-sav="${i}" ${s.on?'checked':''}>
         <span class="av">🐷</span><span class="fx-b"><span class="fx-n">${esc(s.nom)}</span><span class="small muted">${ex?`déjà suivi · ${eur(assetVal(ex,s.mois))} avant`:'nouveau compte'}</span></span>
         <span class="fx-m"><b>${eur2(s.solde)}</b></span></label>`; }).join('')}</div>`:''}
     <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" ${fresh.length||IMP.savings?.some(s=>s.on)?'':'disabled'} onclick="commitImport()">Importer ${fresh.length} opération(s)${IMP.savings?.some(s=>s.on)?` et ${IMP.savings.filter(s=>s.on).length} solde(s) d'épargne`:''}</button></div></div>`;
@@ -1736,12 +1736,37 @@ function commitImport(){ const fresh=IMP.rows.filter(r=>!r.dup);
     + (sv ? ` 🐷 ${sv} compte${sv>1?'s':''} d'épargne mis à jour dans Patrimoine.` : '')
     + ` Corrigez les catégories dans l'onglet Opérations : l'application retient vos corrections pour les prochains imports.`; }
 /* Soldes des comptes d'épargne lus sur le relevé → Patrimoine (un solde par compte et par mois) */
-function savingsType(nom){ return /assurance[\s-]*vie/i.test(nom)?'av' : /\bpel\b|\bcel\b|plan\s*d.?\s*[ée]pargne\s*logement/i.test(nom)?'pel' : /\bpea\b|titres/i.test(nom)?'pea' : /\bper[ico]?\b|retraite/i.test(nom)?'retraite' : 'livret'; }
 const normName=s=>String(s).toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g,'').replace(/[^A-Z0-9]+/g,' ').trim();
+/* Reconnaît un compte d'épargne à partir de son libellé, même abrégé (« LIV A », « LIV DEV DUR », « CPTE EPARGNE »,
+   « ASS VIE », « CSL »…) et lui donne un nom standard : c'est ce nom qui sert à l'associer au bon compte de Patrimoine. */
+const SAV_PATTERNS=[
+  [/\bLIV(RET)? ?A\b/,'Livret A','livret',false],
+  [/\bLDD[SD]?\b|\bLIV(RET)? (DEV|DEVELOPPEMENT)\b|\bDEV(ELOPPEMENT)? DUR/,'LDDS','livret',false],
+  [/\bLEP\b|\bLIV(RET)? (D )?EP(ARGNE)? POP/,'LEP','livret',false],
+  [/\bLIV(RET)? (JEUNE|J)\b/,'Livret Jeune','livret',false],
+  [/\bLIV(RET)? BLEU\b/,'Livret Bleu','livret',false],
+  [/\bPEL\b|\bPLAN (D )?EPARGNE LOGEMENT\b/,'PEL','pel',false],
+  [/\bCEL\b|\bC(O)?MPTE? (D )?EPARGNE LOGEMENT\b|\bCPTE EPARGNE LOGEMENT\b/,'CEL','pel',false],
+  [/\bASS(UR)?(ANCE)? ?VIE\b|\bAV\b/,'Assurance-vie','av',true],
+  [/\bPEA\b/,'PEA','pea',true],
+  [/\bPER[ICO]?\b|\bPLAN (D )?EPARGNE RETRAITE\b/,'PER','retraite',true],
+  [/\bEPARGNE SALARIALE\b|\bPEE\b|\bPERCO\b/,'Épargne salariale','salariale',true],
+  [/\bCSL\b|\bC(O)?MPTE? SUR LIV(RET)?\b|\bLIV(RET)?\b/,'Compte sur livret','livret',true],
+  [/\bEPARGNE\b|\bEPARG\b|\bEPGN\b|\bEP\b/,'Compte épargne','livret',true]];
+function canonSav(txt){
+  const s=' '+normName(txt).replace(/\bCAISSE D ?EPARGNE\b( [A-Z]+){0,3}/g,' ')+' ';
+  for(const [re,label,type,suffix] of SAV_PATTERNS) if(re.test(s)){
+    let extra='';
+    if(suffix){ extra=s.replace(re,' ').replace(/\b(N|NO|NUM|CPTE|COMPTE|SOLDE|AU|DU|LE|LA|DE|D|EUR|EUROS|CONTRAT|VOTRE|VOS|CREDITEUR|DISPONIBLE|VALEUR|TITULAIRE|SUR)\b|\b\d+\b|\bX+\d*\b/g,' ')
+        .replace(/\s+/g,' ').trim().split(' ').filter(w=>w.length>=3).slice(0,2).join(' ');
+      if(extra) extra=' '+extra.charAt(0)+extra.slice(1).toLowerCase(); }
+    return {label:label+extra, key:normName(label+extra), type}; }
+  return null; }
+const savKey = nom => canonSav(nom)?.key || normName(nom);
 function applySavingsBalances(){
   const L=(IMP?.savings||[]).filter(s=>s.on); let n=0;
-  for(const s of L){ let a=S.assets.find(x=>normName(x.nom)===normName(s.nom));
-    if(!a){ a={id:uid(),nom:s.nom,type:savingsType(s.nom)}; S.assets.push(a); }
+  for(const s of L){ let a=S.assets.find(x=>savKey(x.nom)===s.key);
+    if(!a){ a={id:uid(),nom:s.nom,type:s.type||'livret'}; S.assets.push(a); }
     S.snaps[a.id]=S.snaps[a.id]||{}; S.snaps[a.id][s.mois]=s.solde; n++; }
   return n; }
 function resetAll(){ if(confirm('Effacer définitivement toutes les données ? Pensez à exporter une sauvegarde avant.')){ S=blank(); save(); render(); } }
