@@ -201,6 +201,14 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .fx-add{margin-top:12px} .fx-add>summary{list-style:none;display:inline-block} .fx-add>summary::-webkit-details-marker{display:none}
 #fxRestore{display:block;margin-top:10px}
 .imp-sav{margin-top:12px;padding:10px 12px;background:var(--surface);border-radius:12px}
+.chip-btn{all:unset;cursor:pointer;background:rgba(255,255,255,.28);border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap}
+.chip-btn:hover{background:rgba(255,255,255,.38)}
+.save-card{background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;border:2px solid transparent}
+.save-big{font-size:26px;font-weight:700;letter-spacing:-.02em;color:var(--good);display:inline-flex;align-items:center;gap:6px;font-variant-numeric:tabular-nums}
+.save-big.neg{color:var(--bad)}
+.save-calc{margin-top:10px;background:var(--surface-2);border-radius:12px;padding:6px 12px}
+.save-calc .row{padding:6px 0;border-bottom:1px dashed var(--border)} .save-calc .row:last-child{border-bottom:0}
+.save-calc .tot{font-weight:700} .save-calc b{white-space:nowrap}
 .fx-h{font-size:14.5px;margin:16px 0 4px} .fx-h small{font-weight:400;color:var(--muted);margin-left:4px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:70;
   background:var(--text);color:var(--surface);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100vw - 32px);transition:all .25s}
@@ -382,10 +390,15 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 
 <!-- BUDGETS -->
 <section id="v-budget" class="hide">
+  <div class="card save-card" id="savePossible" style="margin-bottom:16px"></div>
   <div class="card" style="margin-bottom:16px">
     <div class="row" style="align-items:center;flex-wrap:wrap"><h2 style="margin:0">🔁 Mes dépenses récurrentes <small>détectées sur vos relevés</small></h2>
       <label class="small" title="Après chaque import, les budgets des catégories concernées sont complétés automatiquement"><input type="checkbox" id="autoBudget"> Remplir les budgets automatiquement</label></div>
     <div id="fixedList" style="margin-top:10px"></div>
+  </div>
+  <div class="card" style="margin-bottom:16px">
+    <h2>📦 Enveloppe « Divers » <small>imprévus et petites dépenses</small></h2>
+    <div id="diversList"></div>
   </div>
   <div class="card">
     <h2>Budgets mensuels par catégorie <small>laisser vide = pas de budget</small></h2>
@@ -760,6 +773,7 @@ function renderDash(){
         <span class="chip">↘ Dépenses <b>${eur(t.dep)}</b></span>
         <span class="chip">🐷 Épargné <b>${eur(t.ep)}</b></span>
         ${w?`<span class="chip">🏦 Patrimoine <b>${eur(w.net)}</b></span>`:''}
+        ${t.rev?`<button class="chip chip-btn" onclick="go('budget')" title="Revenus − dépenses habituelles − enveloppe Divers">💰 Épargne possible <b>${eur(savingPossible(m).possible)}</b> ›</button>`:''}
       </div>
       <div class="hero-sub">${(t.rev||t.dep||t.ep) ? (prev.dep ? `Dépenses ${delta(t.dep,prev.dep)}` : 'Calculé à partir des opérations du mois')
         : `Aucune opération en ${monthLabel(m)}. <button class="hero-link" onclick="quickAdd()">Ajouter une opération</button>`}</div>
@@ -958,9 +972,60 @@ $('#fixedList').addEventListener('submit',e=>{ if(e.target.id!=='fxForm') return
   if(S.autoBudget!==false) applyFixedBudgets(); save(); renderBudget(); toast(`« ${nom} » ajoutée à vos dépenses habituelles ✅`); });
 $('#autoBudget').addEventListener('change',e=>{ S.autoBudget=e.target.checked; if(S.autoBudget) applyFixedBudgets(); save(); renderBudget(); });
 
+/* ---------- Enveloppe Divers : plusieurs lignes, dont une automatique = 10 % des revenus du mois précédent ---------- */
+function diversLines(m){
+  const prevRev=monthTotals(addMonths(m,-1)).rev;
+  const pm=monthLabel(addMonths(m,-1)).split(' ')[0];
+  const auto={id:'auto10',nom:`10 % des revenus ${/^[aeiouyàâéèh]/i.test(pm)?'d\'':'de '}${pm}`,montant:Math.round(prevRev*.10),auto:true,base:prevRev};
+  return [auto,...(S.diversLines||[])].map(l=>({...l,on:!S.diversOff?.[l.id]})); }
+function diversTotal(m){ return diversLines(m).filter(l=>l.on).reduce((s,l)=>s+l.montant,0); }
+function renderDivers(m){
+  const L=diversLines(m), tot=diversTotal(m);
+  $('#diversList').innerHTML = `<div class="fx-list">${L.map(l=>`<label class="fx ${l.on?'':'off'}">
+      <input type="checkbox" data-dv="${l.id}" ${l.on?'checked':''}>
+      <span class="av">${l.auto?'🔟':'📦'}</span>
+      <span class="fx-b"><span class="fx-n">${esc(l.nom)}</span><span class="muted small">${l.auto?(l.base?`calcul automatique : 10 % × ${eur(l.base)}`:'aucun revenu saisi le mois précédent'):'ligne ajoutée par vous'}</span></span>
+      <span class="fx-m"><b>${eur(l.montant)}</b></span>
+      ${l.auto?'<span style="width:26px"></span>':`<button type="button" class="fx-del" data-dvdel="${l.id}" title="Supprimer cette ligne">✕</button>`}</label>`).join('')}</div>
+    <div class="row" style="margin-top:10px;align-items:center"><span class="small muted">Budget « Divers » de ${monthLabel(m).split(' ')[0]} (somme des lignes cochées)</span><b style="font-size:18px">${eur(tot)}</b></div>
+    <form id="dvForm" class="toolbar" style="margin:10px 0 0">
+      <input name="nom" required placeholder="ex. Cadeaux, réparations" style="flex:1;min-width:140px">
+      <input name="montant" type="number" min="0" step="1" required placeholder="€" style="width:90px" inputmode="decimal">
+      <button class="btn">＋ Ajouter une ligne</button></form>`;
+  // le budget de la catégorie Divers = total de l'enveloppe
+  const old=S.budgets['Divers']; if(tot>0) S.budgets['Divers']=tot; else delete S.budgets['Divers'];
+  if(old!==S.budgets['Divers']) save();
+}
+$('#diversList').addEventListener('change',e=>{ const id=e.target.dataset.dv; if(id==null) return; S.diversOff=S.diversOff||{};
+  if(e.target.checked) delete S.diversOff[id]; else S.diversOff[id]=true; save(); renderBudget(); });
+$('#diversList').addEventListener('click',e=>{ const b=e.target.closest('[data-dvdel]'); if(!b) return; e.preventDefault();
+  const l=(S.diversLines||[]).find(x=>x.id===b.dataset.dvdel); if(!l||!confirm(`Supprimer la ligne « ${l.nom} » ?`)) return;
+  S.diversLines=S.diversLines.filter(x=>x!==l); save(); renderBudget(); });
+$('#diversList').addEventListener('submit',e=>{ if(e.target.id!=='dvForm') return; e.preventDefault(); const f=e.target;
+  S.diversLines=S.diversLines||[]; S.diversLines.push({id:uid(),nom:f.nom.value.trim(),montant:+f.montant.value}); save(); renderBudget(); toast('Ligne ajoutée à l\'enveloppe Divers 📦'); });
+
+/* ---------- Épargne possible du mois = revenus − dépenses habituelles cochées − enveloppe Divers ---------- */
+function savingPossible(m){
+  const rev=monthTotals(m).rev, fx=fixedCharges().filter(r=>r.on), fixed=fx.reduce((s,r)=>s+r.montant,0), div=diversTotal(m);
+  return {rev,fixed,n:fx.length,div,possible:rev-fixed-div}; }
+function renderSavePossible(m){
+  const s=savingPossible(m), el=$('#savePossible'), ep=monthTotals(m).ep;
+  if(!s.rev){ el.innerHTML=`<h2>💰 Épargne possible en ${monthLabel(m)}</h2><p class="small muted">Saisissez ou importez d'abord les revenus du mois (salaire…) : l'application en déduira vos dépenses habituelles et votre enveloppe Divers.</p>`; return; }
+  el.innerHTML=`<div class="row" style="align-items:center;flex-wrap:wrap"><h2 style="margin:0">💰 Épargne possible en ${monthLabel(m)}</h2>
+      <span class="save-big ${s.possible<0?'neg':''}"><span class="an-bounce adv-ic">${s.possible>=0?'🐷':'⚠️'}</span> ${eur(s.possible)}</span></div>
+    <div class="save-calc">
+      <div class="row"><span>➕ Revenus du mois</span><b>${eur(s.rev)}</b></div>
+      <div class="row"><span>➖ Dépenses habituelles <span class="muted small">(${s.n} cochée${s.n>1?'s':''})</span></span><b>− ${eur(s.fixed)}</b></div>
+      <div class="row"><span>➖ Enveloppe « Divers »</span><b>− ${eur(s.div)}</b></div>
+      <div class="row tot"><span>= Épargne possible</span><b class="${s.possible<0?'neg':'pos'}">${eur(s.possible)}</b></div>
+    </div>
+    <p class="small muted" style="margin:8px 0 0">${s.possible<0?'Vos charges dépassent vos revenus ce mois-ci : décochez ou supprimez ce qui ne s\'applique pas ci-dessous, ou réduisez l\'enveloppe Divers.'
+      : `Déjà mis de côté ce mois-ci : <b>${eur(ep)}</b>${ep<s.possible?` · encore ${eur(s.possible-ep)} possibles`:' ✓'}. Les dépenses courantes (courses, sorties…) se prennent sur ce montant : visez-en au moins une partie en épargne dès le début du mois.`}</p>`;
+}
+
 function renderBudget(){
   const m=curMonth(), spent={};
-  renderFixed(m);
+  renderFixed(m); renderDivers(m); renderSavePossible(m);
   const fx=fixedByCat(fixedCharges());
   for(const t of S.tx) if(ym(t.date)===m&&t.type==='depense') spent[t.categorie]=(spent[t.categorie]||0)+t.montant;
   let tb=0,ts=0;
@@ -968,7 +1033,8 @@ function renderBudget(){
     const pct=b?s/b*100:0;
     return `<div class="brow">
       <div><span class="ci">${catIcon(c.nom)}</span>${esc(c.nom)}<div class="small muted">${eur(s)} dépensé${b?` · ${s>b?`<span class="neg">dépassé de ${eur(s-b)}</span>`:`reste ${eur(b-s)}`}`:''}${fx[c.nom]?` · <span class="tag">dont ${eur(fx[c.nom])} récurrents</span>`:''}</div></div>
-      <input type="number" min="0" step="10" value="${b||''}" placeholder="—" data-b="${esc(c.nom)}">
+      ${c.nom==='Divers'?`<input type="number" value="${b||''}" placeholder="—" readonly title="Calculé à partir de l'enveloppe Divers ci-dessus" style="opacity:.7">`
+        :`<input type="number" min="0" step="10" value="${b||''}" placeholder="—" data-b="${esc(c.nom)}">`}
       <div class="bar">${b?`<i style="width:${Math.min(100,pct)}%" class="${pct>100?'over':''}"></i>`:''}</div></div>`; }).join('');
   $('#budgetList').innerHTML = `<p class="small muted">${monthLabel(m)} — total budgété ${eur(tb)}, consommé ${eur(ts)} (${tb?Math.round(ts/tb*100):0} %)</p>`+rows;
 }
