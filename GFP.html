@@ -208,6 +208,7 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .save-big.neg{color:var(--bad)}
 .save-calc{margin-top:10px;background:var(--surface-2);border-radius:12px;padding:6px 12px}
 .save-calc .row{padding:6px 0;border-bottom:1px dashed var(--border)} .save-calc .row:last-child{border-bottom:0}
+.amt{font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}
 .save-calc .tot{font-weight:700} .save-calc b{white-space:nowrap}
 .fx-h{font-size:14.5px;margin:16px 0 4px} .fx-h small{font-weight:400;color:var(--muted);margin-left:4px}
 .toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:70;
@@ -667,6 +668,8 @@ const uid = () => Math.random().toString(36).slice(2,10)+Date.now().toString(36)
 /* ===================== Utilitaires ===================== */
 const eur = (v,d=0) => (v<0?'−':'') + Math.abs(v).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}) + ' €';
 const eur2 = v => eur(v,2);
+// montant d'une opération : + en vert (entrée d'argent), − en rouge (sortie)
+const amt = t => t.type==='revenu' ? `<b class="amt pos">+${eur2(t.montant)}</b>` : `<b class="amt neg">−${eur2(t.montant)}</b>`;
 const ym = d => d.slice(0,7);
 const monthLabel = (m,short) => new Date(m+'-01T12:00').toLocaleDateString('fr-FR',short?{month:'short'}:{month:'long',year:'numeric'});
 function addMonths(m,k){ const [y,mo]=m.split('-').map(Number); const d=new Date(y,mo-1+k,1); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
@@ -870,7 +873,7 @@ function renderTx(){
     <td>${new Date(t.date+'T12:00').toLocaleDateString('fr-FR')}</td>
     <td><div class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle)||'<span class="muted">Sans libellé</span>'}${t.rec?' <span class="tag">récurrent</span>':''}${bm(t)!==ym(t.date)?` <span class="tag" title="Reçu à partir du ${shiftDay()} : compté pour le mois suivant">compté en ${monthLabel(bm(t)).split(' ')[0]}</span>`:''}</span></div></td>
     <td class="tx-cat"><select data-cat="${t.id}">${catOpts(t)}</select></td>
-    <td class="num ${t.type==='revenu'?'pos':''}">${t.type==='revenu'?'+':'−'}${eur2(t.montant)}</td>
+    <td class="num amt ${t.type==='revenu'?'pos':'neg'}">${t.type==='revenu'?'+':'−'}${eur2(t.montant)}</td>
     <td class="num"><button class="link" data-del="${t.id}" title="Supprimer">✕</button></td></tr>`).join('')
     : '<tr><td colspan="5" class="empty">Aucune opération.</td></tr>';
   const recs=S.rec.length?`<tr><td colspan="5" class="small muted">Opérations récurrentes actives : ${S.rec.map(r=>`${esc(r.libelle||r.categorie)} (${eur(r.montant)}) <button class="link" data-unrec="${r.id}">arrêter</button>`).join(' · ')}</td></tr>`:'';
@@ -1350,7 +1353,7 @@ function buildTips(a){
   if(!a.count) return T;
   const inP=t=>a.months.includes(bm(t)), depsP=S.tx.filter(t=>t.type==='depense'&&!isSaving(t)&&inP(t));
   const d2=t=>t.date.split('-').reverse().join('/');
-  const ops=(arr,n=8)=>`<div class="dd-ops">${arr.slice(0,n).map(t=>`<div class="row small"><span><span class="ci">${catIcon(t.categorie)}</span>${d2(t)} · ${esc(t.libelle||t.categorie)}</span><b>${eur2(t.montant)}</b></div>`).join('')}${arr.length>n?`<div class="small muted">… et ${arr.length-n} autre${arr.length-n>1?'s':''}</div>`:''}</div>`;
+  const ops=(arr,n=8)=>`<div class="dd-ops">${arr.slice(0,n).map(t=>`<div class="row small"><span><span class="ci">${catIcon(t.categorie)}</span>${d2(t)} · ${esc(t.libelle||t.categorie)}</span>${amt(t)}</div>`).join('')}${arr.length>n?`<div class="small muted">… et ${arr.length-n} autre${arr.length-n>1?'s':''}</div>`:''}</div>`;
   const months=a.months.map(m=>({m,...monthTotals(m)})).filter(x=>x.rev||x.dep);
   const mtable=`<div class="dd-tbl"><div class="row small muted"><span>Mois</span><span>Revenus · Dépenses · Épargne</span></div>${months.map(x=>{ const r=x.rev?Math.round((x.rev-x.dep)/x.rev*100):null;
     return `<div class="row small"><span>${monthLabel(x.m)}</span><span>${eur(x.rev)} · ${eur(x.dep)} · <b class="${r==null?'':r>=20?'pos':r<0?'neg':''}">${r==null?'—':r+' %'}</b></span></div>`; }).join('')}</div>`;
@@ -1469,8 +1472,8 @@ function renderAnalysis(){
         :'<div class="empty">Il faut au moins 2 mois d\'opérations pour comparer.</div>'}</div>
   </div>
   <div class="grid g2" style="margin-top:16px">
-    <div class="card"><h2>Plus grosses dépenses</h2>${a.top.map(t=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle||t.categorie)}<br><span class="muted">${t.date.split('-').reverse().join('/')} · ${esc(t.categorie)}</span></span></span><b>${eur2(t.montant)}</b></div>`).join('')}</div>
-    <div class="card"><h2>Dépenses inhabituelles <small>bien au-dessus de vos habitudes</small></h2>${a.odd.length?a.odd.map(t=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle||t.categorie)}<br><span class="muted">${t.date.split('-').reverse().join('/')} · d'habitude ≈ ${eur(median(S.tx.filter(x=>x.categorie===t.categorie&&x.type==='depense').map(x=>x.montant)))}</span></span></span><b style="color:var(--warn)">${eur2(t.montant)}</b></div>`).join('')
+    <div class="card"><h2>Plus grosses dépenses</h2>${a.top.map(t=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle||t.categorie)}<br><span class="muted">${t.date.split('-').reverse().join('/')} · ${esc(t.categorie)}</span></span></span>${amt(t)}</div>`).join('')}</div>
+    <div class="card"><h2>Dépenses inhabituelles <small>bien au-dessus de vos habitudes</small></h2>${a.odd.length?a.odd.map(t=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle||t.categorie)}<br><span class="muted">${t.date.split('-').reverse().join('/')} · d'habitude ≈ ${eur(median(S.tx.filter(x=>x.categorie===t.categorie&&x.type==='depense').map(x=>x.montant)))}</span></span></span>${amt(t)}</div>`).join('')
       :'<div class="empty">Rien d\'anormal sur la période 👍</div>'}</div>
   </div>`;
 }
@@ -1661,7 +1664,7 @@ function showImport(){
     ${mapHtml}
     <p class="small">${IMP.rows.length} opération(s) lue(s)${dates.length?` du ${new Date(dates[0]+'T12:00').toLocaleDateString('fr-FR')} au ${new Date(dates.at(-1)+'T12:00').toLocaleDateString('fr-FR')}`:''} · <b>${fresh.length} nouvelle(s)</b>${IMP.rows.length-fresh.length?` · ${IMP.rows.length-fresh.length} déjà présente(s), ignorée(s)`:''}</p>
     ${IMP.rows.length?`<div class="tblwrap" style="max-height:260px;overflow:auto"><table class="small"><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie devinée</th><th class="num">Montant</th></tr></thead><tbody>
-      ${IMP.rows.slice(0,50).map(r=>`<tr style="${r.dup?'opacity:.45':''}"><td>${r.date.split('-').reverse().join('/')}</td><td>${esc(r.lib)}</td><td>${esc(r.cat)}${r.dup?' <span class="tag">doublon</span>':''}</td><td class="num ${r.v>0?'pos':''}">${r.v>0?'+':'−'}${eur2(r.montant)}</td></tr>`).join('')}
+      ${IMP.rows.slice(0,50).map(r=>`<tr style="${r.dup?'opacity:.45':''}"><td>${r.date.split('-').reverse().join('/')}</td><td>${esc(r.lib)}</td><td>${esc(r.cat)}${r.dup?' <span class="tag">doublon</span>':''}</td><td class="num amt ${r.v>0?'pos':'neg'}">${r.v>0?'+':'−'}${eur2(r.montant)}</td></tr>`).join('')}
       </tbody></table></div>`:`<p class="neg small">${IMP.note?esc(IMP.note):'Aucune opération reconnue : ajustez les colonnes ci-dessus.'}</p>`}
     ${IMP.savings?.length?`<div class="imp-sav"><b>🐷 Comptes d'épargne trouvés sur le relevé</b> <span class="small muted">→ mis à jour dans Patrimoine (solde de ${monthLabel(IMP.savings[0].mois)})</span>
       ${IMP.savings.map((s,i)=>{ const ex=S.assets.find(a=>normName(a.nom)===normName(s.nom)); return `<label class="fx"><input type="checkbox" data-sav="${i}" ${s.on?'checked':''}>
