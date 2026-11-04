@@ -200,6 +200,8 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .fx-del:hover{color:var(--bad)}
 .fx-add{margin-top:12px} .fx-add>summary{list-style:none;display:inline-block} .fx-add>summary::-webkit-details-marker{display:none}
 #fxRestore{display:block;margin-top:10px}
+.month-hint{margin:14px 0 0;padding:10px 14px;border-radius:12px;background:var(--accent-soft);font-size:13.5px}
+.month-hint.hide{display:none} #svHint{margin:0 0 14px}
 .imp-chk{margin:8px 0;padding:8px 12px;border-radius:10px;font-size:13px}
 .imp-chk.ok{background:color-mix(in srgb,var(--good) 12%,transparent);color:var(--good)}
 .imp-chk.ko{background:color-mix(in srgb,var(--warn) 15%,transparent);color:var(--warn)}
@@ -354,6 +356,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 <!-- TABLEAU DE BORD -->
 <section id="v-dash">
   <div id="kpis"></div>
+  <div class="month-hint hide" id="dashHint"></div>
   <div class="tiles" id="tiles"></div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>Revenus et dépenses <small>6 derniers mois</small></h2>
@@ -485,6 +488,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 <!-- ÉPARGNE -->
 <section id="v-savings" class="hide">
   <h2 style="margin:0 0 14px;font-size:20px">🐷 Mon épargne</h2>
+  <div class="month-hint hide" id="svHint"></div>
   <div class="grid g4" id="svKpis"></div>
   <div class="grid g2" style="margin-top:16px">
     <div class="card"><h2>Versements du mois <small id="svMonth"></small></h2><div id="svOps"></div></div>
@@ -808,6 +812,7 @@ function renderDash(){
   // carte d'accueil : reste du mois, flux, taux d'épargne en anneau
   const pct=t.rev?Math.round(rate*100):0, R=52, C=2*Math.PI*R, fill=Math.max(0,Math.min(1,rate));
   const w = S.assets.length ? wealthAt(m) : null;
+  monthHint($('#dashHint'),m);
   $('#kpis').innerHTML = `<div class="hero">
     <div class="hero-main">
       <div class="hero-lbl">Reste après épargne · ${monthLabel(m)}${shiftDay()?`<br><span style="opacity:.8;font-weight:400">revenus reçus du ${shiftDay()} ${monthLabel(addMonths(m,-1)).split(' ')[0]} au ${shiftDay()-1} ${monthLabel(m).split(' ')[0]}</span>`:''}</div>
@@ -1062,7 +1067,15 @@ function savingsSummary(m){
   const prog=savingsPlans().filter(r=>r.on).reduce((s,r)=>s+r.montant,0);
   const accs=S.assets.filter(a=>SAVING_TYPES.includes(a.type)), accounts=accs.reduce((s,a)=>s+assetVal(a,m),0);
   return {ops,month,prog,accs,accounts}; }
+/* Mois sans relevé importé : on le signale et on propose d'ouvrir le dernier mois qui a des opérations */
+function monthHint(el,m){
+  const has=S.tx.some(t=>t.type==='depense' && ym(t.date)===m && !t.rec), last=S.tx.filter(t=>!t.rec).map(t=>ym(t.date)).sort().at(-1);
+  if(has || !last || last>=m){ el.classList.add('hide'); return; }
+  el.classList.remove('hide');
+  el.innerHTML=`📅 Aucune dépense importée pour ${monthLabel(m)} : votre dernier relevé va jusqu'à <b>${monthLabel(last)}</b>. <button class="link" data-month="${last}">Voir ${monthLabel(last).split(' ')[0]} ›</button>`; }
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-month]'); if(!b) return; month=b.dataset.month; $('#month').value=month; render(); });
 function renderSavings(){
+  monthHint($('#svHint'),curMonth());
   const m=curMonth(), s=savingsSummary(m), p=savingPossible(m);
   $('#svMonth').textContent=monthLabel(m);
   $('#svKpis').innerHTML=[['Épargné ce mois',eur(s.month),`${s.ops.length} versement${s.ops.length>1?'s':''}`],
@@ -1075,7 +1088,7 @@ function renderSavings(){
   $('#svProg').innerHTML = pl.length ? pl.map(r=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(r.nom)}<br><span class="muted">vers le ${r.day} du mois${r.manual?' · ajoutée':''}${r.on?'':' · décochée'}</span></span><b>${eur2(r.montant)} / mois</b></div>`).join('')
     : '<div class="empty">Aucun versement régulier détecté (il faut au moins 2 mois de relevés).<br><span class="small">Vous pouvez en ajouter un dans Budgets → « Ajouter une dépense habituelle », catégorie Épargne.</span></div>';
   $('#svAcc').innerHTML = s.accs.length ? s.accs.map(a=>{ const v=assetVal(a,m), pv=assetVal(a,addMonths(m,-1)); return `<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(a.nom)}<br><span class="muted">${ASSET_TYPES[a.type]?.l||''}</span></span><span style="text-align:right"><b>${eur2(v)}</b><br><span class="${v>=pv?'pos':'neg'}">${v-pv?(v>pv?'+':'')+eur(v-pv)+' sur 1 mois':''}</span></span></div>`; }).join('')
-    : '<div class="empty">Aucun compte d\'épargne suivi.<br><span class="small">Importez un relevé qui affiche vos comptes d\'épargne, ou ajoutez-les dans Patrimoine.</span></div>';
+    : '<div class="empty">Aucun compte d\'épargne suivi.<br><span class="small">Réimportez votre dernier relevé PDF (Données → double-clic sur le logo de l\'accueil) : les soldes de vos comptes d\'épargne imprimés sur le relevé s\'ajouteront ici. Vous pouvez aussi les saisir dans Patrimoine.</span></div>';
   const ms=[...Array(12)].map((_,i)=>addMonths(m,i-11));
   barChart($('#chSv'), ms.map(x=>monthLabel(x,true)), [{name:'Épargné',color:'var(--s3)',values:ms.map(x=>monthTotals(x).ep)}]);
 }
@@ -1892,7 +1905,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await forceUpdate(); }
 /* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
-const APP_V=21;
+const APP_V=22;
 document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
 // Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
 async function forceUpdate(){
