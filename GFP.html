@@ -180,6 +180,10 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .ring svg{transform:rotate(-90deg)}
 .ring .rv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.1}
 .ring .rv b{font-size:26px;letter-spacing:-.02em} .ring .rv span{font-size:11px;opacity:.85}
+.updbar{position:fixed;left:50%;transform:translateX(-50%);top:calc(12px + env(safe-area-inset-top));z-index:60;background:var(--surface);color:var(--text);
+  border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:10px 12px 10px 16px;display:flex;align-items:center;gap:12px;font-weight:600;font-size:14px;width:max-content;max-width:calc(100vw - 24px)}
+.updbar .btn{flex:none}
+.updbar.hide{display:none}
 /* cartes de l'accueil */
 .tiles{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:14px;margin-top:16px}
 .tile{all:unset;box-sizing:border-box;cursor:pointer;background:var(--surface);border-radius:16px;box-shadow:var(--shadow);padding:16px;display:flex;flex-direction:column;gap:8px;min-width:0;
@@ -414,7 +418,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
       <p id="pwMsg" class="small"></p>
     </div>
     <div class="card">
-      <h2>Sauvegarde</h2>
+      <h2>Sauvegarde <small id="appVersion"></small></h2>
       <p class="small muted">Vos données sont stockées uniquement dans ce navigateur, sur cet appareil. Exportez-les régulièrement : la sauvegarde est chiffrée avec votre code et peut être restaurée sur un autre appareil (PC ↔ téléphone).</p>
       <div class="toolbar">
         <button class="btn primary" onclick="exportJSON()">Exporter la sauvegarde chiffrée</button>
@@ -453,6 +457,7 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 </section>
 </main>
 <div class="tip" id="tip"></div>
+<div id="updBar" class="updbar hide">✨ Nouvelle version disponible <button class="btn primary" onclick="applyUpdate()">Mettre à jour</button></div>
 <button id="fab" title="Ajouter une opération" onclick="quickAdd()">+</button>
 
 <script>
@@ -1200,7 +1205,18 @@ function go(v){ view=v;
   document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!=='v-'+v)); scrollTo(0,0); render(); }
 $('#nav').onclick=e=>{ const b=e.target.closest('button[data-v]'); if(b) go(b.dataset.v); };
 function quickAdd(){ go('tx'); const f=$('#txForm'); f.date.value=new Date().toISOString().slice(0,10); setTimeout(()=>f.montant.focus(),50); }
-if('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(()=>{});
+/* Mises à jour : vérifie à l'ouverture et au retour sur l'app ; propose de recharger quand une version arrive */
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+  const hadController = !!navigator.serviceWorker.controller;
+  navigator.serviceWorker.register('sw.js',{updateViaCache:'none'}).then(reg=>{
+    const check=()=>reg.update().catch(()=>{}); check();
+    document.addEventListener('visibilitychange',()=>{ if(!document.hidden) check(); });
+  }).catch(()=>{});
+  navigator.serviceWorker.addEventListener('controllerchange',()=>{ if(hadController) $('#updBar').classList.remove('hide'); });
+  navigator.serviceWorker.addEventListener('message',e=>{ if(e.data?.version) $('#appVersion').textContent=e.data.version.replace('gfp-v','version '); });
+  navigator.serviceWorker.ready.then(r=>r.active?.postMessage('version'));
+}
+async function applyUpdate(){ await saving; location.reload(); }
 $('#month').value=month; $('#month').onchange=e=>{ if(e.target.value){ month=e.target.value; render(); } };
 function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,sim:renderSim,settings:renderSettings})[view](); }
 let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(render,150); });
