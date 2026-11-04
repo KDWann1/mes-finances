@@ -222,6 +222,42 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .h2-msg{margin-top:12px;font-size:14px;line-height:1.45;position:relative;z-index:1}
 .h2-cta{all:unset;box-sizing:border-box;cursor:pointer;display:flex;justify-content:space-between;align-items:center;width:100%;margin-top:14px;padding:12px 14px;border-radius:12px;background:#fff;color:#2b3fb8;font-weight:600;font-size:14.5px;position:relative;z-index:1}
 .h2-cta .t{flex:1} .h2-cta b{white-space:nowrap} .h2-cta .chev{font-size:22px;line-height:1;margin-left:10px}
+/* détail dépliable de la carte du mois */
+.h2-more{position:relative;z-index:1;margin-top:8px;background:rgba(255,255,255,.08);border-radius:12px;padding:2px 14px}
+.h2-more>summary{cursor:pointer;font-size:13px;opacity:.9;padding:8px 0;list-style:none} .h2-more>summary::-webkit-details-marker{display:none}
+.h2-more>summary::after{content:' ›';display:inline-block;transition:transform .2s} .h2-more[open]>summary::after{transform:rotate(90deg)}
+.h2-more .h2-row{font-size:14px} .h2-more .h2-row:last-child{border-bottom:0}
+/* À faire ce mois-ci */
+.todo{margin-top:16px}
+.todo-i{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;width:100%;padding:10px 0;border-bottom:1px solid var(--surface-2)}
+.todo-i:last-child{border-bottom:0}
+.todo-c{width:24px;height:24px;border-radius:50%;border:2px solid var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex:none;color:#fff}
+.todo-i.done .todo-c{background:var(--good);border-color:var(--good)}
+.todo-t{flex:1;display:flex;flex-direction:column;min-width:0} .todo-t b{font-weight:600} .todo-t small{color:var(--text-2);font-size:12.5px}
+.todo-i.done .todo-t b{color:var(--muted);text-decoration:line-through}
+.todo-g{color:var(--muted);font-size:20px}
+/* menu Plus */
+.more-list{display:flex;flex-direction:column;gap:10px}
+.more-list button{all:unset;box-sizing:border-box;cursor:pointer;display:flex;align-items:center;gap:12px;background:var(--surface);border-radius:14px;box-shadow:var(--shadow);padding:14px 16px}
+.more-list button span:nth-child(2){flex:1;display:flex;flex-direction:column} .more-list small{color:var(--text-2);font-size:12.5px}
+.more-list i{font-style:normal;color:var(--muted);font-size:22px}
+/* rubriques repliables (Budgets) */
+.fold{margin-bottom:12px;padding:0 16px}
+.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;padding:14px 0}
+.fold>summary::-webkit-details-marker{display:none}
+.fold-ic{width:36px;height:36px;border-radius:11px;background:var(--accent-soft);display:inline-flex;align-items:center;justify-content:center;font-size:18px;flex:none}
+.fold-t{flex:1;display:flex;flex-direction:column;min-width:0} .fold-t small{color:var(--text-2);font-size:12.5px}
+.fold-chev{color:var(--muted);font-size:22px;transition:transform .2s} .fold[open] .fold-chev{transform:rotate(90deg)}
+.fold[open]{padding-bottom:16px}
+/* opérations groupées par jour */
+.day{margin-bottom:6px}
+.day-h{display:flex;justify-content:space-between;font-size:12.5px;font-weight:600;color:var(--text-2);padding:12px 2px 6px;border-bottom:1px solid var(--border)}
+.op{display:flex;align-items:center;gap:10px;padding:10px 2px;border-bottom:1px solid var(--surface-2);cursor:pointer}
+.op.open{background:var(--surface-2);border-radius:10px}
+.op-b{flex:1;min-width:0;display:flex;flex-direction:column}
+.op-b b{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .op-b small{color:var(--muted);font-size:12px}
+.op-edit{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:8px 2px 12px 46px}
+.op-edit.hide{display:none}
 .chip-btn{all:unset;cursor:pointer;background:rgba(255,255,255,.28);border-radius:999px;padding:6px 12px;font-size:13px;white-space:nowrap}
 .chip-btn:hover{background:rgba(255,255,255,.38)}
 .save-card{background:linear-gradient(var(--surface),var(--surface)) padding-box,var(--grad) border-box;border:2px solid transparent}
@@ -357,8 +393,8 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
     <button data-v="dash" class="on"><span class="ic">📊</span><span class="lb">Tableau de bord</span><span class="sh">Accueil</span></button>
     <button data-v="tx"><span class="ic">🧾</span><span class="lb">Transactions</span><span class="sh">Opérations</span></button>
     <button data-v="budget"><span class="ic">🎯</span><span class="lb">Budgets</span><span class="sh">Budgets</span></button>
-    <button data-v="goals"><span class="ic">🏁</span><span class="lb">Objectifs</span><span class="sh">Objectifs</span></button>
-    <button data-v="pay"><span class="ic">💼</span><span class="lb">Salaire</span><span class="sh">Salaire</span></button>
+    <button data-v="savings"><span class="ic">🐷</span><span class="lb">Épargne</span><span class="sh">Épargne</span></button>
+    <button data-v="more"><span class="ic">☰</span><span class="lb">Plus</span><span class="sh">Plus</span></button>
   </nav>
   <span class="spacer"></span>
   <select id="month" title="Mois affiché"></select>
@@ -371,17 +407,19 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 <section id="v-dash">
   <div id="kpis"></div>
   <div class="month-hint hide" id="dashHint"></div>
+  <div id="todo"></div>
   <div class="tiles" id="tiles"></div>
-  <div class="grid g2" style="margin-top:16px">
-    <div class="card"><h2>Revenus et dépenses <small>6 derniers mois</small></h2>
-      <div class="legend"><span><i style="background:var(--s1)"></i>Revenus</span><span><i style="background:var(--s2)"></i>Dépenses</span></div>
-      <div id="chMonthly"></div></div>
-    <div class="card"><h2>Dépenses par catégorie <small id="catMonth"></small></h2><div id="chCats"></div></div>
-  </div>
-  <div class="grid g2" style="margin-top:16px">
-    <div class="card"><h2>Épargne cumulée <small>12 derniers mois</small></h2><div id="chCum"></div></div>
-    <div class="card"><h2>Analyse et conseils <small>règle 50 / 30 / 20</small></h2><div id="advice"></div>
-      <button class="link" onclick="go('analysis')" style="margin-top:6px;font-weight:600">Voir l'analyse détaillée de mes relevés ›</button></div>
+</section>
+
+<!-- PLUS -->
+<section id="v-more" class="hide">
+  <h2 style="margin:0 0 14px;font-size:20px">☰ Plus</h2>
+  <div class="more-list">
+    <button data-go="analysis"><span class="av">🔍</span><span><b>Analyse & conseils</b><small>Graphiques, abonnements, conseils chiffrés</small></span><i>›</i></button>
+    <button data-go="pay"><span class="av">💼</span><span><b>Salaire</b><small>Vos bulletins et l'évolution de votre salaire</small></span><i>›</i></button>
+    <button data-go="goals"><span class="av">🏁</span><span><b>Objectifs</b><small>Épargne de précaution, projets</small></span><i>›</i></button>
+    <button data-go="wealth"><span class="av">🏦</span><span><b>Patrimoine</b><small>Vue d'ensemble : comptes, placements, crédits</small></span><i>›</i></button>
+    <button data-go="sim"><span class="av">📈</span><span><b>Simulateur</b><small>Faire fructifier son épargne dans le temps</small></span><i>›</i></button>
   </div>
 </section>
 
@@ -402,30 +440,35 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
   <div class="card" style="margin-top:16px">
     <div class="toolbar">
       <h2 style="margin:0">Opérations</h2><span class="spacer"></span>
-      <input id="txSearch" placeholder="Rechercher…">
+      <div class="seg" id="txKind"><button data-k="all" class="on">Tout</button><button data-k="in">Entrées</button><button data-k="out">Sorties</button></div>
+    </div>
+    <div class="toolbar" style="margin-top:-6px">
+      <input id="txSearch" placeholder="Rechercher…" style="flex:1;min-width:120px">
       <select id="txCat"><option value="">Toutes catégories</option></select>
       <label class="small"><input type="checkbox" id="txAll"> Tous les mois</label>
     </div>
-    <div class="tblwrap"><table><thead><tr><th>Date</th><th>Libellé</th><th>Catégorie</th><th class="num">Montant</th><th></th></tr></thead><tbody id="txBody"></tbody></table></div>
+    <p class="small muted" style="margin:-6px 0 8px">Touchez une opération pour changer sa catégorie ou la supprimer.</p>
+    <div id="txBody"></div>
   </div>
 </section>
 
 <!-- BUDGETS -->
 <section id="v-budget" class="hide">
-  <div class="card save-card" id="savePossible" style="margin-bottom:16px"></div>
-  <div class="card" style="margin-bottom:16px">
-    <div class="row" style="align-items:center;flex-wrap:wrap"><h2 style="margin:0">🔁 Mes dépenses récurrentes <small>détectées sur vos relevés</small></h2>
-      <label class="small" title="Après chaque import, les budgets des catégories concernées sont complétés automatiquement"><input type="checkbox" id="autoBudget"> Remplir les budgets automatiquement</label></div>
+  <h2 style="margin:0 0 6px;font-size:20px">🎯 Mes budgets</h2>
+  <p class="small muted" style="margin:0 0 14px">Touchez une rubrique pour l'ouvrir.</p>
+  <details class="card fold" id="foldFixed">
+    <summary><span class="fold-ic">🔁</span><span class="fold-t"><b>Dépenses habituelles</b><small id="sumFixed"></small></span><span class="fold-chev">›</span></summary>
+    <label class="small" style="display:block;margin-top:10px" title="Après chaque import, les budgets des catégories concernées sont complétés automatiquement"><input type="checkbox" id="autoBudget"> Remplir les budgets automatiquement</label>
     <div id="fixedList" style="margin-top:10px"></div>
-  </div>
-  <div class="card" style="margin-bottom:16px">
-    <h2>📦 Enveloppe « Divers » <small>imprévus et petites dépenses</small></h2>
-    <div id="diversList"></div>
-  </div>
-  <div class="card">
-    <h2>Budgets mensuels par catégorie <small>laisser vide = pas de budget</small></h2>
-    <div id="budgetList"></div>
-  </div>
+  </details>
+  <details class="card fold" id="foldDivers">
+    <summary><span class="fold-ic">📦</span><span class="fold-t"><b>Enveloppe Divers</b><small id="sumDivers"></small></span><span class="fold-chev">›</span></summary>
+    <div id="diversList" style="margin-top:10px"></div>
+  </details>
+  <details class="card fold" id="foldCats">
+    <summary><span class="fold-ic">📊</span><span class="fold-t"><b>Budgets par catégorie</b><small id="sumCats"></small></span><span class="fold-chev">›</span></summary>
+    <div id="budgetList" style="margin-top:10px"></div>
+  </details>
 </section>
 
 <!-- OBJECTIFS -->
@@ -503,13 +546,14 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 <section id="v-savings" class="hide">
   <h2 style="margin:0 0 14px;font-size:20px">🐷 Mon épargne</h2>
   <div class="month-hint hide" id="svHint"></div>
-  <div class="grid g4" id="svKpis"></div>
+  <div class="card save-card" id="savePossible"></div>
+  <div class="grid g4" id="svKpis" style="margin-top:16px"></div>
   <div class="grid g2" style="margin-top:16px">
-    <div class="card"><h2>Versements du mois <small id="svMonth"></small></h2><div id="svOps"></div></div>
-    <div class="card"><h2>Épargne programmée <small>versements réguliers détectés</small></h2><div id="svProg"></div></div>
+    <div class="card"><h2>Mis de côté ce mois <small id="svMonth"></small></h2><div id="svOps"></div></div>
+    <div class="card"><h2>Épargne programmée <small>versements réguliers</small></h2><div id="svProg"></div></div>
   </div>
-  <div class="card" style="margin-top:16px"><h2>Mes comptes d'épargne <small>soldes lus sur vos relevés ou saisis dans Patrimoine</small></h2><div id="svAcc"></div></div>
-  <div class="card" style="margin-top:16px"><h2>Épargne mois par mois <small>12 derniers mois</small></h2><div id="chSv"></div></div>
+  <div class="card" style="margin-top:16px"><h2>Mes comptes d'épargne <small>soldes lus sur vos relevés</small></h2><div id="svAcc"></div></div>
+  <div class="card" style="margin-top:16px"><h2>Mis de côté mois par mois <small>12 derniers mois</small></h2><div id="chSv"></div></div>
 </section>
 
 <!-- ANALYSE -->
@@ -520,6 +564,17 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
   </div>
   <p class="small muted" id="anaPeriod" style="margin:-8px 0 14px"></p>
   <div id="anaBody"></div>
+  <h3 style="margin:22px 0 10px;font-size:16px">📈 Mes graphiques <small class="muted" style="font-weight:400" id="catMonthTitle"></small></h3>
+  <div class="grid g2">
+    <div class="card"><h2>Entrées et dépenses <small>6 derniers mois</small></h2>
+      <div class="legend"><span><i style="background:var(--s1)"></i>Entrées</span><span><i style="background:var(--s2)"></i>Dépenses</span></div>
+      <div id="chMonthly"></div></div>
+    <div class="card"><h2>Dépenses par catégorie <small id="catMonth"></small></h2><div id="chCats"></div></div>
+  </div>
+  <div class="grid g2" style="margin-top:16px">
+    <div class="card"><h2>Argent gardé, cumulé <small>12 derniers mois</small></h2><div id="chCum"></div></div>
+    <div class="card"><h2>Règle 50 / 30 / 20 <small>besoins · envies · épargne</small></h2><div id="advice"></div></div>
+  </div>
 </section>
 
 <!-- SIMULATEUR -->
@@ -820,80 +875,86 @@ let month = ym(new Date().toISOString());
 function curMonth(){ return month; }
 
 function renderDash(){
-  const m=curMonth(), t=monthTotals(m), prev=monthTotals(addMonths(m,-1));
-  const rate = t.rev>0 ? (t.rev-t.dep)/t.rev : 0;
-  const delta = (a,b) => b ? `${a>=b?'+':'−'}${Math.abs(Math.round((a-b)/b*100))} % vs mois précédent` : '—';
-  // carte du mois = même logique que l'épargne : salaire − dépenses habituelles − enveloppe Divers − autres dépenses − épargne = il me reste
+  const m=curMonth(), t=monthTotals(m);
+  // Carte du mois : une seule question, « combien il me reste ? ». Le détail se déplie d'un toucher.
   monthHint($('#dashHint'),m);
   const mm=monthLabel(m).split(' ')[0], pm=monthLabel(addMonths(m,-1)).split(' ')[0], P=monthPlan(m), has=P.sal||t.dep||t.ep;
   const per = shiftDay() ? `du ${shiftDay()} ${pm} au ${shiftDay()-1} ${mm}` : '';
-  const B=Math.max(P.sal, P.fixed+P.div+P.other+P.ep, 1), pc=v=>Math.max(0,Math.min(100,v/B*100));
-  const seg=[['b-fix',pc(P.fixed),'habituelles'],['b-div',pc(P.div),'Divers'],['b-dep',pc(P.other),'autres dépenses'],['b-ep',pc(P.ep),'mis de côté']];
-  const used=seg.reduce((s,x)=>s+x[1],0), pRest=Math.max(0,100-used);
-  let verdict;
-  if(!has) verdict=`Aucune opération en ${monthLabel(m)}. <button class="hero-link" onclick="quickAdd()">Ajouter une opération</button>`;
-  else if(!P.sal) verdict='Aucun salaire trouvé pour ce mois : importez votre relevé ou saisissez-le dans l\'onglet Salaire.';
-  else if(P.rest<0) verdict=`⚠️ Vos charges et dépenses dépassent votre salaire de <b>${eur(-P.rest)}</b> ce mois-ci.`;
-  else verdict=`👍 Une fois vos charges habituelles et votre enveloppe Divers prévues, il vous reste <b>${eur(P.rest)}</b> pour finir le mois. Mettez-en une partie de côté.`;
-  if(has && P.fixedLeft>0) verdict+=`<br>📅 Encore <b>${eur(P.fixedLeft)}</b> de dépenses habituelles à venir ce mois-ci (déjà comptées).`;
+  const charges=Math.round((P.fixed+P.div+P.other)*100)/100;
+  let msg;
+  if(!has) msg=`Aucune opération en ${monthLabel(m)}. <button class="hero-link" onclick="quickAdd()">Ajouter une opération</button>`;
+  else if(!P.sal) msg='Aucun salaire trouvé pour ce mois : importez votre relevé ou saisissez-le dans Salaire.';
+  else if(P.rest<0) msg=`⚠️ Vos dépenses dépassent votre salaire de <b>${eur(-P.rest)}</b>.`;
+  else msg=`👍 C'est ce qui vous reste pour finir le mois, toutes charges prévues.`;
   $('#kpis').innerHTML = `<div class="hero hero2">
     <div class="h2-top"><span class="h2-title">Mon mois de ${monthLabel(m)}</span>${per?`<span class="h2-per">${per}</span>`:''}</div>
     ${has?`<div class="h2-rows">
       <div class="h2-row"><span>💶 Mon salaire</span><b>+ ${eur(P.sal)}</b></div>
-      <div class="h2-row"><span>🏠 Dépenses habituelles <small>(${P.nFixed})</small></span><b>− ${eur(P.fixed)}</b></div>
-      <div class="h2-row"><span>📦 Enveloppe Divers</span><b>− ${eur(P.div)}</b></div>
-      <div class="h2-row"><span>🛒 Autres dépenses du mois</span><b>− ${eur(P.other)}</b></div>
-      <div class="h2-row"><span>🐷 Déjà mis de côté</span><b>− ${eur(P.ep)}</b></div>
+      <div class="h2-row"><span>🧾 Mes charges et dépenses</span><b>− ${eur(charges)}</b></div>
+      <div class="h2-row"><span>🐷 Mis de côté</span><b>− ${eur(P.ep)}</b></div>
       <div class="h2-total"><span>Il me reste</span><b class="${P.rest<0?'h2-neg':''}">${eur(P.rest)}</b></div>
     </div>
-    ${P.sal?`<div class="h2-bar" role="img" aria-label="Répartition du salaire : ${seg.map(x=>`${x[2]} ${Math.round(x[1])} %`).join(', ')}, reste ${Math.round(pRest)} %">
-      ${seg.map(x=>`<i class="${x[0]}" style="width:${x[1]}%"></i>`).join('')}<i class="b-rest" style="width:${pRest}%"></i></div>
-    <div class="h2-legend">${seg.filter(x=>x[1]>=.5).map(x=>`<span><i class="${x[0]}"></i>${x[2]} ${Math.round(x[1])} %</span>`).join('')}<span><i class="b-rest"></i>reste ${Math.round(pRest)} %</span></div>`:''}`:''}
-    <div class="h2-msg">${verdict}</div>
-    ${has?`<button class="h2-cta" onclick="go('budget')"><span class="t">🔎 Voir le détail dans Budgets</span><span class="chev">›</span></button>`:''}
+    <details class="h2-more"><summary>Voir le détail des charges</summary>
+      <div class="h2-row"><span>🏠 Dépenses habituelles <small>(${P.nFixed}${P.fixedLeft>0?` · ${eur(P.fixedLeft)} à venir`:''})</small></span><b>− ${eur(P.fixed)}</b></div>
+      <div class="h2-row"><span>📦 Enveloppe Divers</span><b>− ${eur(P.div)}</b></div>
+      <div class="h2-row"><span>🛒 Autres dépenses du mois</span><b>− ${eur(P.other)}</b></div>
+    </details>`:''}
+    <div class="h2-msg">${msg}</div>
   </div>`;
+  renderTodo(m,P);
+  renderTiles(m,t);
+}
 
+/* « À faire ce mois-ci » : la routine mensuelle, chaque tâche se coche toute seule */
+function renderTodo(m,P){
+  const el=$('#todo'), now=ym(new Date().toISOString());
+  if(m!==now){ el.innerHTML=''; return; }
+  const prev=addMonths(now,-1);
+  const imported=S.tx.some(t=>!t.manual && !t.rec && !t.demo && ym(t.date)===prev && +t.date.slice(8)>=20);
+  const toCheck=S.tx.filter(t=>t.type==='depense' && !t.manual && t.categorie==='Divers' && [prev,now].includes(ym(t.date))).length;
+  const saved=P.ep>0, possible=Math.max(0,Math.round(savingPossible(m).possible-P.ep));
+  const items=[
+    {done:imported, t:`Importer le relevé ${(p=>/^[aeiouyàâéèh]/i.test(p)?"d'"+p:'de '+p)(monthLabel(prev).split(' ')[0])}`, sub:imported?'fait':'Données → double-clic sur le logo', go:'settings'},
+    {done:imported && !toCheck, t:'Vérifier les catégories', sub:toCheck?`${toCheck} opération${toCheck>1?'s':''} classée${toCheck>1?'s':''} en « Divers »`:(imported?'tout est classé':'après l\'import'), go:'tx', cat:'Divers'},
+    {done:saved, t:'Mettre de l\'argent de côté', sub:saved?`${eur(P.ep)} mis de côté`:(possible?`jusqu'à ${eur(possible)} possibles`:'virement vers votre livret'), go:'savings'}];
+  const n=items.filter(i=>i.done).length;
+  el.innerHTML=`<div class="card todo"><div class="row"><h2 style="margin:0">✅ À faire ce mois-ci</h2><span class="tag">${n}/3</span></div>
+    ${items.map(i=>`<button class="todo-i ${i.done?'done':''}" data-todo="${i.go}" ${i.cat?`data-cat-filter="${i.cat}"`:''}><span class="todo-c">${i.done?'✓':''}</span><span class="todo-t"><b>${i.t}</b><small>${i.sub}</small></span><span class="todo-g">›</span></button>`).join('')}</div>`;
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('[data-todo]'); if(!b) return;
+  if(b.dataset.catFilter){ go('tx'); $('#txCat').value=b.dataset.catFilter; renderTx(); return; }
+  go(b.dataset.todo); });
+
+/* Graphiques et règle 50/30/20 (écran Analyse) */
+function renderCharts(m){
   const months=[...Array(6)].map((_,i)=>addMonths(m,i-5));
   barChart($('#chMonthly'), months.map(x=>monthLabel(x,true)), [
-    {name:'Revenus',color:'var(--s1)',values:months.map(x=>monthTotals(x).rev)},
-    {name:'Dépenses',color:'var(--s2)',values:months.map(x=>{const k=monthTotals(x);return k.dep;})}]);
-
-  // catégories : barres horizontales triées
+    {name:'Entrées',color:'var(--s1)',values:months.map(x=>monthTotals(x).rev)},
+    {name:'Dépenses',color:'var(--s2)',values:months.map(x=>monthTotals(x).dep)}]);
   $('#catMonth').textContent = monthLabel(m);
   const by={}; for(const x of S.tx) if(ym(x.date)===m && x.type==='depense' && !isInt(x)) by[x.categorie]=(by[x.categorie]||0)+x.montant;
   const rows=Object.entries(by).sort((a,b)=>b[1]-a[1]), tot=rows.reduce((a,r)=>a+r[1],0), mx=rows[0]?.[1]||1;
   $('#chCats').innerHTML = rows.length ? rows.map(([c,v])=>{ const b=S.budgets[c];
     return `<div style="margin:8px 0"><div class="row small"><span><span class="ci">${catIcon(c)}</span>${esc(c)}${b?` <span class="tag">budget ${eur(b)}</span>`:''}</span><span><b>${eur(v)}</b> <span class="muted">${Math.round(v/tot*100)} %</span></span></div>
     <div class="bar"><i style="width:${v/mx*100}%" class="${b&&v>b?'over':''}"></i></div></div>`; }).join('') : '<div class="empty">Aucune dépense ce mois-ci.</div>';
-
   const m12=[...Array(12)].map((_,i)=>addMonths(m,i-11)); let c=0;
   const cum=m12.map(x=>{ const k=monthTotals(x); c+=k.rev-k.dep; return c; });
-  lineChart($('#chCum'), m12.map(x=>monthLabel(x,true)), [{name:'Épargne cumulée',color:'var(--s1)',values:cum,fill:true}]);
-
-  renderAdvice(m,t);
-  renderTiles(m,t);
+  lineChart($('#chCum'), m12.map(x=>monthLabel(x,true)), [{name:'Argent gardé, cumulé',color:'var(--s1)',values:cum,fill:true}]);
+  renderAdvice(m,monthTotals(m));
 }
 
-/* Cartes cliquables de l'accueil : un résumé vivant de chaque rubrique */
+/* Cartes de l'accueil : les 4 rubriques du quotidien (les autres sont dans « Plus ») */
 function renderTiles(m,t){
   const txM=S.tx.filter(x=>bm(x)===m), last=txM.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
   const spent={}; for(const x of txM) if(x.type==='depense') spent[x.categorie]=(spent[x.categorie]||0)+x.montant;
   const buds=Object.entries(S.budgets).filter(([,b])=>b>0), over=buds.filter(([c,b])=>(spent[c]||0)>b).length;
-  const gT=S.goals.reduce((s,g)=>s+g.cible,0), gA=S.goals.reduce((s,g)=>s+Math.min(g.actuel,g.cible),0);
-  const ps=S.payslips.slice().sort((a,b)=>a.mois.localeCompare(b.mois)).at(-1);
-  const w=S.assets.length?wealthAt(m):null, wp=w?wealthAt(addMonths(m,-1)):null;
-  const A=analyze(6), AT=buildTips(A), AG=AT.reduce((s,x)=>s+(x.gain||0),0);
+  const A=analyze(6), AT=buildTips(A), AG=AT.reduce((s,x)=>s+(x.gain||0),0), sv=savingsSummary(m);
   const T=[
-    {v:'analysis',ic:'🔍',t:'Analyse & conseils',val:A.count?`${AT.length}`:'—',unit:A.count?` conseil${AT.length>1?'s':''}`:'',sub:A.count?(AG>0?`Jusqu'à <b class="pos">${eur(AG)}</b> / an à gagner`:'Vos finances passées au crible'):'Importez vos relevés pour l\'activer'},
-    {v:'tx',ic:'🧾',t:'Opérations',val:`${txM.length}`,unit:txM.length>1?' ce mois':' ce mois',sub:last?`Dernière : ${esc(last.libelle||last.categorie)} · ${last.type==='revenu'?'+':'−'}${eur(last.montant)}`:'Ajoutez votre première opération'},
-    {v:'budget',ic:'🎯',t:'Budgets',val:buds.length?`${buds.length-over}/${buds.length}`:'—',unit:buds.length?' respectés':'',sub:buds.length?(over?`<span class="neg">${over} dépassé${over>1?'s':''}</span>`:'<span class="pos">Tout est sous contrôle</span>'):'Fixez vos plafonds mensuels',bar:buds.length?(buds.length-over)/buds.length:null},
-    {v:'goals',ic:'🏁',t:'Objectifs',val:S.goals.length?Math.round(gA/gT*100)+' %':'—',unit:S.goals.length?' atteint':'',sub:S.goals.length?`${S.goals.length} objectif${S.goals.length>1?'s':''} · ${eur(gA)} sur ${eur(gT)}`:'Épargne de précaution, projet…',bar:S.goals.length?gA/gT:null},
-    {v:'pay',ic:'💼',t:'Salaire',val:ps?eur(ps.net):'—',unit:'',sub:ps?`Net · ${monthLabel(ps.mois)}`:'Ajoutez votre bulletin du mois'},
-    (()=>{ const sv=savingsSummary(m); return {v:'savings',ic:'🐷',t:'Épargne',val:eur(sv.month),unit:' ce mois',
-      sub:sv.prog||sv.accounts?`${sv.prog?`${eur(sv.prog)} / mois programmés`:''}${sv.prog&&sv.accounts?' · ':''}${sv.accounts?`${eur(sv.accounts)} sur vos comptes`:''}`:'Versements, épargne programmée, comptes'}; })(),
-    {v:'wealth',ic:'🏦',t:'Patrimoine',val:w?eur(w.net):'—',unit:'',sub:w?`<span class="${w.net>=wp.net?'pos':'neg'}">${w.net>=wp.net?'+':''}${eur(w.net-wp.net)}</span> sur 1 mois`:'Comptes, livrets, placements, crédits'},
-    {v:'sim',ic:'📈',t:'Simulateur',val:'',unit:'',sub:'Projetez votre épargne avec les intérêts composés'},
-  ]; // « Données » n'a pas de carte : accès par double-clic / double-tap sur le logo, depuis l'accueil
+    {v:'tx',ic:'🧾',t:'Opérations',val:`${txM.length}`,unit:' ce mois',sub:last?`Dernière : ${esc(last.libelle||last.categorie)}`:'Ajoutez votre première opération'},
+    {v:'budget',ic:'🎯',t:'Budgets',val:buds.length?`${buds.length-over}/${buds.length}`:'—',unit:buds.length?' respectés':'',sub:buds.length?(over?`<span class="neg">${over} dépassé${over>1?'s':''}</span>`:'<span class="pos">Tout est sous contrôle</span>'):'Fixez vos plafonds',bar:buds.length?(buds.length-over)/buds.length:null},
+    {v:'savings',ic:'🐷',t:'Épargne',val:eur(sv.month),unit:' mis de côté',sub:sv.accounts?`${eur(sv.accounts)} sur vos comptes`:'Livrets, PEL, épargne programmée'},
+    {v:'analysis',ic:'🔍',t:'Conseils',val:A.count?`${AT.length}`:'—',unit:A.count?` conseil${AT.length>1?'s':''}`:'',sub:A.count?(AG>0?`Jusqu'à <b class="pos">${eur(AG)}</b> / an`:'Vos finances au crible'):'Après import de relevés'},
+  ]; // « Données » : accès par double-clic / double-tap sur le logo, depuis l'accueil
   $('#tiles').innerHTML=T.map(x=>`<button class="tile" data-go="${x.v}">
     <span class="tile-top"><span class="tile-ic">${x.ic}</span><span class="tile-t">${x.t}</span><span class="tile-go">›</span></span>
     ${x.val?`<span class="tile-val">${x.val}<small>${x.unit}</small></span>`:''}
@@ -901,6 +962,7 @@ function renderTiles(m,t){
     <span class="tile-sub">${x.sub}</span></button>`).join('');
 }
 $('#tiles').addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
+$('#v-more').addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
 
 function renderAdvice(m,t){
   const el=$('#advice');
@@ -934,22 +996,34 @@ function fillCatSelects(){
 function renderTx(){
   fillCatSelects();
   const q=$('#txSearch').value.toLowerCase(), c=$('#txCat').value, all=$('#txAll').checked, m=curMonth();
-  const list=S.tx.filter(t=>(all||bm(t)===m)&&(!c||t.categorie===c)&&(!q||(t.libelle||'').toLowerCase().includes(q)))
+  const list=S.tx.filter(t=>(all||bm(t)===m)&&(!c||t.categorie===c)&&(!q||(t.libelle||'').toLowerCase().includes(q))
+      &&(txKind==='all'||(txKind==='in')===(t.type==='revenu')))
     .sort((a,b)=>b.date.localeCompare(a.date));
   const catOpts = t => S.cats.filter(x=>x.type===t.type).map(x=>`<option ${x.nom===t.categorie?'selected':''}>${esc(x.nom)}</option>`).join('');
-  $('#txBody').innerHTML = list.length ? list.map(t=>`<tr>
-    <td>${new Date(t.date+'T12:00').toLocaleDateString('fr-FR')}</td>
-    <td><div class="lib"><span class="av">${catIcon(t.categorie)}</span><span>${esc(t.libelle)||'<span class="muted">Sans libellé</span>'}${t.rec?' <span class="tag">récurrent</span>':''}${bm(t)!==ym(t.date)?` <span class="tag" title="Reçu à partir du ${shiftDay()} : compté pour le mois suivant">compté en ${monthLabel(bm(t)).split(' ')[0]}</span>`:''}</span></div></td>
-    <td class="tx-cat"><select data-cat="${t.id}">${catOpts(t)}</select></td>
-    <td class="num amt ${t.type==='revenu'?'pos':'neg'}">${t.type==='revenu'?'+':'−'}${eur2(t.montant)}</td>
-    <td class="num"><button class="link" data-del="${t.id}" title="Supprimer">✕</button></td></tr>`).join('')
-    : '<tr><td colspan="5" class="empty">Aucune opération.</td></tr>';
-  const recs=S.rec.length?`<tr><td colspan="5" class="small muted">Opérations récurrentes actives : ${S.rec.map(r=>`${esc(r.libelle||r.categorie)} (${eur(r.montant)}) <button class="link" data-unrec="${r.id}">arrêter</button>`).join(' · ')}</td></tr>`:'';
+  // regroupement par jour : « Mardi 28 octobre » puis les opérations du jour
+  const days=[]; for(const t of list){ const d=days.at(-1); if(d&&d.date===t.date) d.ops.push(t); else days.push({date:t.date,ops:[t]}); }
+  const dayLbl=s=>{ const x=new Date(s+'T12:00'); const l=x.toLocaleDateString('fr-FR',{weekday:'long',day:'numeric',month:'long'}); return l.charAt(0).toUpperCase()+l.slice(1); };
+  $('#txBody').innerHTML = list.length ? days.map(d=>`<div class="day"><div class="day-h"><span>${dayLbl(d.date)}</span><span>${(()=>{ const v=d.ops.reduce((s,t)=>s+(t.type==='revenu'?t.montant:-t.montant),0); return `<span class="${v>=0?'pos':'neg'}">${v>=0?'+':'−'}${eur(Math.abs(v))}</span>`; })()}</span></div>
+    ${d.ops.map(t=>`<div class="op" data-op="${t.id}"><span class="av">${catIcon(t.categorie)}</span>
+      <span class="op-b"><b>${esc(t.libelle)||'Sans libellé'}</b><small>${esc(t.categorie)}${t.rec?' · récurrent':''}${bm(t)!==ym(t.date)?` · compté en ${monthLabel(bm(t)).split(' ')[0]}`:''}</small></span>
+      ${amt(t)}</div>
+      <div class="op-edit hide" data-ed="${t.id}"><label class="small">Catégorie <select data-cat="${t.id}">${catOpts(t)}</select></label>
+        <button class="link danger small" data-del="${t.id}">Supprimer</button></div>`).join('')}</div>`).join('')
+    : '<div class="empty">Aucune opération.</div>';
+  const recs=S.rec.length?`<p class="small muted" style="margin-top:12px">Opérations récurrentes actives : ${S.rec.map(r=>`${esc(r.libelle||r.categorie)} (${eur(r.montant)}) <button class="link" data-unrec="${r.id}">arrêter</button>`).join(' · ')}</p>`:'';
   $('#txBody').insertAdjacentHTML('beforeend',recs);
 }
+let txKind='all';
+$('#txKind').addEventListener('click',e=>{ const b=e.target.closest('[data-k]'); if(!b) return; txKind=b.dataset.k;
+  document.querySelectorAll('#txKind button').forEach(x=>x.classList.toggle('on',x===b)); renderTx(); });
+// toucher une opération : affiche / masque sa catégorie et le bouton Supprimer
+$('#txBody').addEventListener('click',e=>{ const op=e.target.closest('.op'); if(!op) return;
+  const ed=$(`[data-ed="${op.dataset.op}"]`), open=ed.classList.contains('hide');
+  document.querySelectorAll('#txBody .op-edit').forEach(x=>x.classList.add('hide')); document.querySelectorAll('#txBody .op').forEach(x=>x.classList.remove('open'));
+  if(open){ ed.classList.remove('hide'); op.classList.add('open'); } });
 $('#txBody').addEventListener('click',e=>{
   const d=e.target.dataset;
-  if(d.del){ S.tx=S.tx.filter(t=>t.id!==d.del); save(); render(); }
+  if(d.del){ const t=S.tx.find(x=>x.id===d.del); if(!t||!confirm(`Supprimer « ${t.libelle||t.categorie} » (${eur2(t.montant)}) ?`)) return; S.tx=S.tx.filter(x=>x.id!==d.del); save(); render(); }
   if(d.unrec && confirm('Arrêter cette opération récurrente ? (les opérations déjà créées sont conservées)')){ S.rec=S.rec.filter(r=>r.id!==d.unrec); save(); render(); }
 });
 $('#txBody').addEventListener('change',e=>{ const id=e.target.dataset.cat; if(!id) return;
@@ -997,50 +1071,49 @@ function renderFixed(m){
       <div class="toolbar" style="margin:0"><button class="btn primary">Ajouter</button></div>
     </form></details>`;
   const restore = hidden ? `<button class="link small" id="fxRestore">Réafficher ${hidden} dépense${hidden>1?'s':''} supprimée${hidden>1?'s':''}</button>` : '';
-  const sav=savingsPlans();
-  if(!list.length && !sav.length){ el.innerHTML='<div class="empty" style="padding:16px 0">Importez au moins <b>2 mois</b> de relevés (Données → double-clic sur le logo) : les dépenses qui reviennent chaque mois apparaîtront ici. Vous pouvez aussi les ajouter vous-même.</div>'+addForm+restore; return; }
-  const paid=r=>S.tx.some(t=>t.type==='depense' && ym(t.date)===m && libKey(t.libelle)===r.key);
-  const row=r=>{ const p=paid(r); return `<label class="fx ${r.on?'':'off'}">
-      <input type="checkbox" data-fx="${esc(r.key)}" ${r.on?'checked':''}>
-      <span class="av">${catIcon(r.cat)}</span>
-      <span class="fx-b"><span class="fx-n">${esc(r.nom)}</span><span class="muted small">${esc(r.cat)} · vers le ${r.day} du mois${r.manual?' · <span class="tag">ajoutée</span>':''}</span></span>
-      <span class="fx-m"><b>${eur2(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ '+(catOf(r.cat)?.groupe==='epargne'?'versé':'payé'):'à venir'}</span></span>
-      <button type="button" class="fx-del" data-fxdel="${esc(r.key)}" title="Supprimer de mes habitudes">✕</button></label>`; };
-  const on=list.filter(r=>r.on), tot=on.reduce((s,r)=>s+r.montant,0), done=on.filter(paid).reduce((s,r)=>s+r.montant,0);
-  const sOn=sav.filter(r=>r.on), sTot=sOn.reduce((s,r)=>s+r.montant,0), sDone=sOn.filter(paid).reduce((s,r)=>s+r.montant,0);
-  el.innerHTML = (list.length?`<div class="fx-sum"><div><b>${eur(tot)}</b><span>par mois · ${on.length} dépense${on.length>1?'s':''}</span></div>
-      <div><b class="pos">${eur(done)}</b><span>déjà payé en ${monthLabel(m).split(' ')[0]}</span></div>
-      <div><b style="color:var(--warn)">${eur(tot-done)}</b><span>reste à payer</span></div></div>
-    <div class="fx-list">${list.map(row).join('')}</div>`:'')
-    + (sav.length?`<h3 class="fx-h">🐷 Mon épargne programmée <small>${eur(sTot)} / mois · ${eur(sTot*12)} / an${sDone?` · ${eur(sDone)} déjà versés ce mois`:''}</small></h3>
-    <div class="fx-list">${sav.map(row).join('')}</div>`
-    : `<p class="small muted fx-h">🐷 Aucun versement régulier vers un livret, PEL ou assurance-vie détecté. Vous pouvez en ajouter un ci-dessous (catégorie « Épargne & investissement »).</p>`)
-    + `<div class="toolbar" style="margin:12px 0 0"><button class="btn primary" onclick="fillBudgets()">Remplir mes budgets avec ces montants</button>
+  if(!list.length){ el.innerHTML='<div class="empty" style="padding:16px 0">Importez au moins <b>2 mois</b> de relevés (Données → double-clic sur le logo) : les dépenses qui reviennent chaque mois apparaîtront ici. Vous pouvez aussi les ajouter vous-même.</div>'+addForm+restore; return; }
+  const row=r=>fxRow(r,m);
+  const paid=r=>fxPaid(r,m), on=list.filter(r=>r.on), tot=on.reduce((s,r)=>s+r.montant,0), done=on.filter(paid).reduce((s,r)=>s+r.montant,0);
+  el.innerHTML = `<div class="fx-sum"><div><b>${eur(tot)}</b><span>par mois · ${on.length} dépense${on.length>1?'s':''}</span></div>
+      <div><b class="pos">${eur(done)}</b><span>déjà payé</span></div>
+      <div><b style="color:var(--warn)">${eur(tot-done)}</b><span>encore à payer</span></div></div>
+    <div class="fx-list">${list.map(row).join('')}</div>
+    <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" onclick="fillBudgets()">Remplir mes budgets avec ces montants</button>
       <span class="small muted">Décochez pour ne pas compter, ✕ pour supprimer.</span></div>${addForm}${restore}`;
 }
+// ligne d'une dépense habituelle ou d'un versement d'épargne programmé (Budgets et Épargne)
+const fxPaid=(r,m)=>S.tx.some(t=>t.type==='depense' && ym(t.date)===m && libKey(t.libelle)===r.key);
+function fxRow(r,m){ const p=fxPaid(r,m), sav=catOf(r.cat)?.groupe==='epargne'; return `<label class="fx ${r.on?'':'off'}">
+    <input type="checkbox" data-fx="${esc(r.key)}" ${r.on?'checked':''}>
+    <span class="av">${sav?'🐷':catIcon(r.cat)}</span>
+    <span class="fx-b"><span class="fx-n">${esc(r.nom)}</span><span class="muted small">${sav?'':esc(r.cat)+' · '}vers le ${r.day} du mois${r.manual?' · <span class="tag">ajoutée</span>':''}</span></span>
+    <span class="fx-m"><b>${eur(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ '+(sav?'versé':'payé'):'à venir'}</span></span>
+    <button type="button" class="fx-del" data-fxdel="${esc(r.key)}" title="Supprimer">✕</button></label>`; }
 function fillBudgets(){ const r=applyFixedBudgets();
   toast(r.created||r.raised ? `${r.created} budget${r.created>1?'s':''} créé${r.created>1?'s':''}, ${r.raised} complété${r.raised>1?'s':''} avec vos dépenses récurrentes.` : 'Vos budgets couvrent déjà toutes vos dépenses récurrentes.'); renderBudget(); }
 function toast(msg){ let t=$('#toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
   t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),3500); }
-$('#fixedList').addEventListener('change',e=>{ const k=e.target.dataset.fx; if(k==null) return; S.fixedOff=S.fixedOff||{};
-  if(e.target.checked) delete S.fixedOff[k]; else S.fixedOff[k]=true; if(S.autoBudget!==false) applyFixedBudgets(); save(); renderBudget(); });
-$('#fixedList').addEventListener('click',e=>{
+// mêmes actions (cocher, supprimer, ajouter) dans Budgets et dans l'écran Épargne
+const fxOn=(ev,fn)=>['#fixedList','#svProg'].forEach(s=>$(s).addEventListener(ev,fn));
+fxOn('change',e=>{ const k=e.target.dataset.fx; if(k==null) return; S.fixedOff=S.fixedOff||{};
+  if(e.target.checked) delete S.fixedOff[k]; else S.fixedOff[k]=true; if(S.autoBudget!==false) applyFixedBudgets(); save(); render(); });
+fxOn('click',e=>{
   const del=e.target.closest('[data-fxdel]');
   if(del){ e.preventDefault(); const k=del.dataset.fxdel, man=(S.fixedManual||[]).find(x=>x.key===k);
     if(man){ if(!confirm(`Supprimer « ${man.nom} » de vos dépenses habituelles ?`)) return; S.fixedManual=S.fixedManual.filter(x=>x!==man); }
     else { S.fixedHidden=S.fixedHidden||{}; S.fixedHidden[k]=true; }
-    delete S.fixedOff?.[k]; save(); renderBudget(); toast('Dépense retirée de vos habitudes. Les budgets déjà fixés ne changent pas.'); return; }
-  if(e.target.id==='fxRestore'){ S.fixedHidden={}; save(); renderBudget(); toast('Dépenses détectées réaffichées.'); }
+    delete S.fixedOff?.[k]; save(); render(); toast('Dépense retirée de vos habitudes. Les budgets déjà fixés ne changent pas.'); return; }
+  if(e.target.id==='fxRestore'){ S.fixedHidden={}; save(); render(); toast('Dépenses détectées réaffichées.'); }
 });
-$('#fixedList').addEventListener('input',e=>{ // libellé connu → catégorie et montant pré-remplis
+fxOn('input',e=>{ // libellé connu → catégorie et montant pré-remplis
   if(e.target.name!=='nom') return; const f=e.target.form, t=S.tx.filter(x=>x.type==='depense'&&x.libelle===e.target.value).sort((a,b)=>b.date.localeCompare(a.date))[0];
   if(t){ f.cat.value=t.categorie; f.montant.value=t.montant; f.day.value=+t.date.slice(8); } });
-$('#fixedList').addEventListener('submit',e=>{ if(e.target.id!=='fxForm') return; e.preventDefault(); const f=e.target;
+fxOn('submit',e=>{ if(e.target.id!=='fxForm') return; e.preventDefault(); const f=e.target;
   const nom=f.nom.value.trim(), key=libKey(nom)||nom.toUpperCase(); S.fixedManual=S.fixedManual||[];
   S.fixedManual=S.fixedManual.filter(x=>x.key!==key);
   S.fixedManual.push({key,nom,cat:f.cat.value,montant:+f.montant.value,day:Math.min(31,Math.max(1,+f.day.value||1))});
   if(S.fixedHidden) delete S.fixedHidden[key];
-  if(S.autoBudget!==false) applyFixedBudgets(); save(); renderBudget(); toast(`« ${nom} » ajoutée à vos dépenses habituelles ✅`); });
+  if(S.autoBudget!==false) applyFixedBudgets(); save(); render(); toast(`« ${nom} » ajoutée à vos dépenses habituelles ✅`); });
 $('#autoBudget').addEventListener('change',e=>{ S.autoBudget=e.target.checked; if(S.autoBudget) applyFixedBudgets(); save(); renderBudget(); });
 
 /* ---------- Enveloppe Divers : plusieurs lignes, dont une automatique = 10 % des revenus du mois précédent ---------- */
@@ -1108,23 +1181,22 @@ function monthHint(el,m){
   el.innerHTML=`📅 Aucune dépense importée pour ${monthLabel(m)} : votre dernier relevé va jusqu'à <b>${monthLabel(last)}</b>. <button class="link" data-month="${last}">Voir ${monthLabel(last).split(' ')[0]} ›</button>`; }
 document.addEventListener('click',e=>{ const b=e.target.closest('[data-month]'); if(!b) return; month=b.dataset.month; $('#month').value=month; render(); });
 function renderSavings(){
-  monthHint($('#svHint'),curMonth());
+  monthHint($('#svHint'),curMonth()); renderSavePossible(curMonth());
   const m=curMonth(), s=savingsSummary(m), p=savingPossible(m);
   $('#svMonth').textContent=monthLabel(m);
-  $('#svKpis').innerHTML=[['Épargné ce mois',eur(s.month),`${s.ops.length} versement${s.ops.length>1?'s':''}`],
-    ['Épargne possible',p.rev?eur(p.possible):'—',p.rev?(s.month>=p.possible?'objectif atteint ✓':`encore ${eur(Math.max(0,p.possible-s.month))}`):'salaire non trouvé'],
-    ['Programmée',eur(s.prog),'par mois'],['Sur vos comptes',eur(s.accounts),`${s.accs.length} compte${s.accs.length>1?'s':''} d'épargne`]]
+  $('#svKpis').innerHTML=[['Mis de côté ce mois',eur(s.month),`${s.ops.length} versement${s.ops.length>1?'s':''}`],
+    ['Épargne programmée',eur(s.prog),'par mois'],['Sur mes comptes',eur(s.accounts),`${s.accs.length} compte${s.accs.length>1?'s':''} d'épargne`]]
     .map(([l,v,x])=>`<div class="card kpi"><div class="lbl">${l}</div><div class="val">${v}</div><div class="sub">${x}</div></div>`).join('');
-  $('#svOps').innerHTML = s.ops.length ? s.ops.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span class="lib"><span class="av">🐷</span><span>${esc(t.libelle||t.categorie)}<br><span class="muted">${t.date.split('-').reverse().join('/')}</span></span></span><b class="amt pos">+${eur2(t.montant)}</b></div>`).join('')
-    : `<div class="empty">Aucun versement vers l'épargne en ${monthLabel(m)}.<br><span class="small">Un virement vers votre livret ou assurance-vie doit être classé en « Épargne & investissement » (onglet Opérations).</span></div>`;
+  $('#svOps').innerHTML = s.ops.length ? s.ops.sort((a,b)=>b.date.localeCompare(a.date)).map(t=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span class="lib"><span class="av">🐷</span><span>${esc(t.libelle||t.categorie)}<br><span class="muted">${t.date.split('-').reverse().join('/')}</span></span></span><b class="amt pos">+${eur(t.montant)}</b></div>`).join('')
+    : `<div class="empty">Rien de mis de côté en ${monthLabel(m)} pour l'instant.<br><span class="small">Un virement vers votre livret ou assurance-vie doit être classé en « Épargne & investissement » (onglet Opérations).</span></div>`;
   const pl=savingsPlans();
-  $('#svProg').innerHTML = pl.length ? pl.map(r=>`<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(r.nom)}<br><span class="muted">vers le ${r.day} du mois${r.manual?' · ajoutée':''}${r.on?'':' · décochée'}</span></span><b>${eur2(r.montant)} / mois</b></div>`).join('')
-    : '<div class="empty">Aucun versement régulier détecté (il faut au moins 2 mois de relevés).<br><span class="small">Vous pouvez en ajouter un dans Budgets → « Ajouter une dépense habituelle », catégorie Épargne.</span></div>';
+  $('#svProg').innerHTML = pl.length ? `<div class="fx-list">${pl.map(r=>fxRow(r,m)).join('')}</div><p class="small muted" style="margin:8px 0 0">Décochez pour ne pas compter, ✕ pour supprimer.</p>`
+    : '<div class="empty">Aucun versement régulier détecté (il faut au moins 2 mois de relevés).<br><span class="small">Vous pouvez en ajouter un dans Budgets → Dépenses habituelles → « Ajouter », catégorie Épargne.</span></div>';
   $('#svAcc').innerHTML = s.accs.length ? s.accs.map(a=>{ const v=assetVal(a,m), pv=assetVal(a,addMonths(m,-1)); return `<div class="row small" style="padding:8px 0;border-bottom:1px solid var(--surface-2)"><span>${esc(a.nom)}<br><span class="muted">${ASSET_TYPES[a.type]?.l||''}</span></span><span style="text-align:right"><b>${eur2(v)}</b><br><span class="${v>=pv?'pos':'neg'}">${v-pv?(v>pv?'+':'')+eur(v-pv)+' sur 1 mois':''}</span></span></div>`; }).join('')
     : `<div class="empty">Aucun compte d'épargne suivi pour l'instant.<br><span class="small">Importez votre dernier relevé PDF : les soldes de vos comptes d'épargne (livret, PEL…) imprimés dessus s'ajouteront ici. Les opérations déjà importées sont ignorées.</span>
       <div style="margin-top:12px"><label class="btn primary">📄 Importer mon dernier relevé…<input type="file" accept="application/pdf,.pdf,.ofx,.qfx,.qif,.csv,.txt" class="hide" onchange="window.IMPBACK='savings';go('settings');importBank(this)"></label></div></div>`;
   const ms=[...Array(12)].map((_,i)=>addMonths(m,i-11));
-  barChart($('#chSv'), ms.map(x=>monthLabel(x,true)), [{name:'Épargné',color:'var(--s3)',values:ms.map(x=>monthTotals(x).ep)}]);
+  barChart($('#chSv'), ms.map(x=>monthLabel(x,true)), [{name:'Mis de côté',color:'var(--s3)',values:ms.map(x=>monthTotals(x).ep)}]);
 }
 
 /* ---------- Épargne possible du mois = salaire − dépenses habituelles cochées − enveloppe Divers ----------
@@ -1161,9 +1233,19 @@ function renderSavePossible(m){
       : `Déjà mis de côté ce mois-ci : <b>${eur(ep)}</b>${ep<s.possible?` · encore ${eur(s.possible-ep)} possibles`:' ✓'}. Les dépenses courantes (courses, sorties…) se prennent sur ce montant : visez-en au moins une partie en épargne dès le début du mois.`}</p>`;
 }
 
+// résumé affiché sur chaque rubrique repliée de Budgets (pour lire l'essentiel sans rien ouvrir)
+function renderBudgetSummaries(m){
+  const fx=fixedCharges().filter(r=>r.on), fTot=fx.reduce((s,r)=>s+r.montant,0);
+  const paid=fx.filter(r=>S.tx.some(t=>t.type==='depense' && ym(t.date)===m && libKey(t.libelle)===r.key)).reduce((s,r)=>s+r.montant,0);
+  $('#sumFixed').textContent = fx.length ? `${eur(fTot)} / mois · ${eur(Math.max(0,fTot-paid))} encore à payer` : 'aucune détectée pour l\'instant';
+  $('#sumDivers').textContent = `${eur(diversTotal(m))} prévus ce mois`;
+  const spent={}; for(const t of S.tx) if(ym(t.date)===m && t.type==='depense' && !isInt(t)) spent[t.categorie]=(spent[t.categorie]||0)+t.montant;
+  const buds=Object.entries(S.budgets).filter(([,b])=>b>0), over=buds.filter(([c,b])=>(spent[c]||0)>b).length;
+  $('#sumCats').innerHTML = buds.length ? (over?`<span class="neg">${over} dépassé${over>1?'s':''}</span> sur ${buds.length}`:`${buds.length} budget${buds.length>1?'s':''}, tous respectés ✓`) : 'aucun budget fixé';
+}
 function renderBudget(){
   const m=curMonth(), spent={};
-  renderFixed(m); renderDivers(m); renderSavePossible(m);
+  renderFixed(m); renderDivers(m); renderBudgetSummaries(m);
   const fx=fixedByCat(fixedCharges());
   for(const t of S.tx) if(ym(t.date)===m&&t.type==='depense' && !isInt(t)) spent[t.categorie]=(spent[t.categorie]||0)+t.montant;
   let tb=0,ts=0;
@@ -1581,6 +1663,7 @@ function tipAction(b){ const d=b.dataset;
   if(d.sim){ go('sim'); const f=$('#simForm'); f.m.value=d.sim; f.r.value=3; renderSim(); }
 }
 function renderAnalysis(){
+  renderCharts(curMonth());
   const a=analyze(anaN), tips=buildTips(a), el=$('#anaBody');
   document.querySelectorAll('#anaSeg button').forEach(b=>b.classList.toggle('on',+b.dataset.n===anaN));
   $('#anaPeriod').textContent=`${monthLabel(a.months[0])} → ${monthLabel(a.end)}`;
@@ -1931,8 +2014,11 @@ function loadDemo(){
 let view='dash';
 function go(v){ view=v;
   document.querySelectorAll('#nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===v));
-  // rubriques accessibles seulement par les cartes de l'accueil : bouton « ‹ Accueil »
-  $('#backHome').classList.toggle('hide', v==='dash' || !!document.querySelector(`#nav [data-v="${v}"]`));
+  // rubriques hors barre d'onglets : bouton retour (« ‹ Plus » pour celles du menu Plus, sinon « ‹ Accueil »)
+  const inMore=['analysis','pay','goals','wealth','sim'].includes(v), bh=$('#backHome');
+  bh.classList.toggle('hide', v==='dash' || !!document.querySelector(`#nav [data-v="${v}"]`));
+  bh.textContent = inMore ? '‹ Plus' : '‹ Accueil'; bh.onclick = ()=>go(inMore?'more':'dash');
+  if(inMore) document.querySelector('#nav [data-v="more"]').classList.add('on');
   document.querySelectorAll('main>section').forEach(s=>s.classList.toggle('hide',s.id!=='v-'+v)); scrollTo(0,0); render(); }
 $('#anaBody').addEventListener('click',e=>{ const b=e.target.closest('.dd-act'); if(b){ e.preventDefault(); tipAction(b); } });
 $('#anaSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-n]'); if(b){ anaN=+b.dataset.n; renderAnalysis(); } });
@@ -1955,7 +2041,7 @@ if('serviceWorker' in navigator && location.protocol.startsWith('http')){
 }
 async function applyUpdate(){ await forceUpdate(); }
 /* Version de CE fichier : à garder égale au numéro de VERSION de sw.js */
-const APP_V=28;
+const APP_V=29;
 document.querySelectorAll('.appv').forEach(e=>e.textContent=APP_V);
 // Mise à jour « forcée » : vos données (dans le navigateur) sont conservées ; seule la copie de l'application est renouvelée
 async function forceUpdate(){
@@ -1981,7 +2067,7 @@ fillMonthSelect();
 $('#month').onchange=e=>{ if(e.target.value){ month=e.target.value; render(); } };
 // si le mois affiché change ailleurs dans l'application, la liste suit
 const _render=render; render=function(){ if($('#month').value!==month) fillMonthSelect(); _render(); };
-function render(){ ({dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,savings:renderSavings,analysis:renderAnalysis,sim:renderSim,settings:renderSettings})[view](); }
+function render(){ ({more:()=>{},dash:renderDash,tx:renderTx,budget:renderBudget,goals:renderGoals,wealth:renderWealth,pay:renderPay,savings:renderSavings,analysis:renderAnalysis,sim:renderSim,settings:renderSettings})[view](); }
 let rt; addEventListener('resize',()=>{ clearTimeout(rt); rt=setTimeout(render,150); });
 $('#txForm').date.value=new Date().toISOString().slice(0,10);
 showLock();
