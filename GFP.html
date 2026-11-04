@@ -186,6 +186,19 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
   border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.2);padding:10px 12px 10px 16px;display:flex;align-items:center;gap:12px;font-weight:600;font-size:14px;width:max-content;max-width:calc(100vw - 24px)}
 .updbar .btn{flex:none}
 .updbar.hide{display:none}
+/* dépenses récurrentes (budgets) */
+.brow{display:grid;grid-template-columns:minmax(140px,1.2fr) 110px 2fr;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--surface-2)}
+@media (max-width:760px){ .brow{grid-template-columns:1fr 96px;gap:6px 10px} .brow .bar{grid-column:1/-1} }
+.fx-sum{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;background:var(--surface-2);border-radius:12px;padding:12px;margin-bottom:6px}
+.fx-sum div{display:flex;flex-direction:column} .fx-sum b{font-size:19px;font-variant-numeric:tabular-nums} .fx-sum span{font-size:11.5px;color:var(--text-2)}
+.fx{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--surface-2);cursor:pointer}
+.fx:last-child{border-bottom:0} .fx.off{opacity:.45}
+.fx input{width:18px;height:18px;accent-color:var(--accent);flex:none}
+.fx-b{flex:1;min-width:0;display:flex;flex-direction:column} .fx-n{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.fx-m{display:flex;flex-direction:column;align-items:flex-end;font-variant-numeric:tabular-nums}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom));transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:70;
+  background:var(--text);color:var(--surface);padding:10px 16px;border-radius:12px;font-size:14px;max-width:calc(100vw - 32px);transition:all .25s}
+.toast.on{opacity:1;transform:translate(-50%,0)}
 /* analyse */
 .seg{display:inline-flex;background:var(--surface-2);border-radius:10px;padding:3px;gap:2px}
 .seg button{all:unset;cursor:pointer;padding:6px 12px;border-radius:8px;font-size:13px;font-weight:600;color:var(--text-2)}
@@ -327,6 +340,11 @@ input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(
 
 <!-- BUDGETS -->
 <section id="v-budget" class="hide">
+  <div class="card" style="margin-bottom:16px">
+    <div class="row" style="align-items:center;flex-wrap:wrap"><h2 style="margin:0">🔁 Mes dépenses récurrentes <small>détectées sur vos relevés</small></h2>
+      <label class="small" title="Après chaque import, les budgets des catégories concernées sont complétés automatiquement"><input type="checkbox" id="autoBudget"> Remplir les budgets automatiquement</label></div>
+    <div id="fixedList" style="margin-top:10px"></div>
+  </div>
   <div class="card">
     <h2>Budgets mensuels par catégorie <small>laisser vide = pas de budget</small></h2>
     <div id="budgetList"></div>
@@ -504,7 +522,7 @@ const DEFAULT_CATS = [
 const RULES = [
   [/salaire|paie|virement.*employeur/i,'Salaire'],[/loyer|pr[eê]t immo|syndic|credit immo/i,'Logement'],
   [/carrefour|leclerc|auchan|lidl|intermarch|monoprix|franprix|casino|aldi|super ?u|picard/i,'Alimentation'],
-  [/sncf|ratp|navigo|total|esso|shell|bp |uber|parking|p[ée]age|blablacar/i,'Transport'],
+  [/sncf|ratp|navigo|total|esso|shell|bp |uber(?!\s*eats)|parking|p[ée]age|blablacar/i,'Transport'],
   [/edf|engie|orange|sfr|free|bouygues|sosh|veolia|eau/i,'Énergie & télécom'],
   [/pharma|m[ée]decin|docteur|mutuelle|cpam|dentiste/i,'Santé'],[/assurance|maif|macif|axa|matmut/i,'Assurances'],
   [/restaurant|resto|mcdo|burger|deliveroo|uber ?eats|caf[ée]|bar /i,'Restaurants & sorties'],
@@ -810,14 +828,50 @@ $('#txForm').onsubmit=e=>{
 };
 ['#txSearch','#txCat','#txAll'].forEach(s=>$(s).addEventListener('input',renderTx));
 
+/* ---------- Dépenses récurrentes → budgets ----------
+   Une dépense est « récurrente » si elle revient ~1 fois par mois avec un montant stable (voir analyze()).
+   Le budget d'une catégorie est complété avec la somme de ses dépenses récurrentes (jamais diminué). */
+const ceil5=v=>Math.ceil(v/5)*5;
+function fixedCharges(){ return analyze(12).rec.filter(r=>!/épargne/i.test(r.cat)).map(r=>({...r,on:!S.fixedOff?.[r.key]})); }
+function fixedByCat(list){ const by={}; for(const r of list) if(r.on) by[r.cat]=(by[r.cat]||0)+r.montant; return by; }
+function applyFixedBudgets(){ const by=fixedByCat(fixedCharges()); let created=0, raised=0;
+  for(const [c,v] of Object.entries(by)){ const need=ceil5(v), cur=S.budgets[c]||0;
+    if(cur<need){ cur?raised++:created++; S.budgets[c]=need; } }
+  if(created||raised) save(); return {created,raised}; }
+function renderFixed(m){
+  const list=fixedCharges(), el=$('#fixedList'); $('#autoBudget').checked=S.autoBudget!==false;
+  if(!list.length){ el.innerHTML='<div class="empty" style="padding:16px 0">Importez au moins <b>2 mois</b> de relevés (Données → double-clic sur le logo) : les dépenses qui reviennent chaque mois apparaîtront ici.</div>'; return; }
+  const paid=r=>S.tx.some(t=>t.type==='depense' && ym(t.date)===m && libKey(t.libelle)===r.key);
+  const on=list.filter(r=>r.on), tot=on.reduce((s,r)=>s+r.montant,0), done=on.filter(paid).reduce((s,r)=>s+r.montant,0);
+  el.innerHTML = `<div class="fx-sum"><div><b>${eur(tot)}</b><span>par mois · ${on.length} dépense${on.length>1?'s':''}</span></div>
+      <div><b class="pos">${eur(done)}</b><span>déjà payé en ${monthLabel(m).split(' ')[0]}</span></div>
+      <div><b style="color:var(--warn)">${eur(tot-done)}</b><span>reste à payer</span></div></div>
+    <div class="fx-list">${list.map(r=>{ const p=paid(r); return `<label class="fx ${r.on?'':'off'}">
+      <input type="checkbox" data-fx="${esc(r.key)}" ${r.on?'checked':''}>
+      <span class="av">${catIcon(r.cat)}</span>
+      <span class="fx-b"><span class="fx-n">${esc(r.nom)}</span><span class="muted small">${esc(r.cat)} · vers le ${r.day} du mois</span></span>
+      <span class="fx-m"><b>${eur2(r.montant)}</b><span class="small ${p?'pos':'muted'}">${p?'✓ payé':'à venir'}</span></span></label>`; }).join('')}</div>
+    <div class="toolbar" style="margin:12px 0 0"><button class="btn primary" onclick="fillBudgets()">Remplir mes budgets avec ces dépenses</button>
+      <span class="small muted">Décochez ce qui ne doit pas compter (dépense ponctuelle, abonnement résilié…).</span></div>`;
+}
+function fillBudgets(){ const r=applyFixedBudgets();
+  toast(r.created||r.raised ? `${r.created} budget${r.created>1?'s':''} créé${r.created>1?'s':''}, ${r.raised} complété${r.raised>1?'s':''} avec vos dépenses récurrentes.` : 'Vos budgets couvrent déjà toutes vos dépenses récurrentes.'); renderBudget(); }
+function toast(msg){ let t=$('#toast'); if(!t){ t=document.createElement('div'); t.id='toast'; t.className='toast'; document.body.appendChild(t); }
+  t.textContent=msg; t.classList.add('on'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('on'),3500); }
+$('#fixedList').addEventListener('change',e=>{ const k=e.target.dataset.fx; if(k==null) return; S.fixedOff=S.fixedOff||{};
+  if(e.target.checked) delete S.fixedOff[k]; else S.fixedOff[k]=true; if(S.autoBudget!==false) applyFixedBudgets(); save(); renderBudget(); });
+$('#autoBudget').addEventListener('change',e=>{ S.autoBudget=e.target.checked; if(S.autoBudget) applyFixedBudgets(); save(); renderBudget(); });
+
 function renderBudget(){
   const m=curMonth(), spent={};
+  renderFixed(m);
+  const fx=fixedByCat(fixedCharges());
   for(const t of S.tx) if(ym(t.date)===m&&t.type==='depense') spent[t.categorie]=(spent[t.categorie]||0)+t.montant;
   let tb=0,ts=0;
   const rows=S.cats.filter(c=>c.type==='depense').map(c=>{ const b=S.budgets[c.nom]||0, s=spent[c.nom]||0; if(b){tb+=b;ts+=s;}
     const pct=b?s/b*100:0;
-    return `<div style="display:grid;grid-template-columns:minmax(140px,1.2fr) 110px 2fr;gap:12px;align-items:center;margin:10px 0">
-      <div>${esc(c.nom)}<div class="small muted">${eur(s)} dépensé${b?` · ${s>b?`<span class="neg">dépassé de ${eur(s-b)}</span>`:`reste ${eur(b-s)}`}`:''}</div></div>
+    return `<div class="brow">
+      <div><span class="ci">${catIcon(c.nom)}</span>${esc(c.nom)}<div class="small muted">${eur(s)} dépensé${b?` · ${s>b?`<span class="neg">dépassé de ${eur(s-b)}</span>`:`reste ${eur(b-s)}`}`:''}${fx[c.nom]?` · <span class="tag">dont ${eur(fx[c.nom])} récurrents</span>`:''}</div></div>
       <input type="number" min="0" step="10" value="${b||''}" placeholder="—" data-b="${esc(c.nom)}">
       <div class="bar">${b?`<i style="width:${Math.min(100,pct)}%" class="${pct>100?'over':''}"></i>`:''}</div></div>`; }).join('');
   $('#budgetList').innerHTML = `<p class="small muted">${monthLabel(m)} — total budgété ${eur(tb)}, consommé ${eur(ts)} (${tb?Math.round(ts/tb*100):0} %)</p>`+rows;
@@ -1094,10 +1148,11 @@ function analyze(n){
   const groups={}; for(const t of deps){ const k=libKey(t.libelle); if(k) (groups[k]=groups[k]||[]).push(t); }
   const rec=[];
   for(const [k,g] of Object.entries(groups)){ const ms=new Set(g.map(t=>ym(t.date))); if(ms.size<2 || g.length/ms.size>1.5) continue;
-    const md=median(g.map(t=>t.montant)), close=g.filter(t=>Math.abs(t.montant-md)<=Math.max(2,md*.15));
-    if(new Set(close.map(t=>ym(t.date))).size<2) continue;
+    // montant stable (±10 %) sur au moins 60 % des mois où elle apparaît : sinon c'est une dépense courante variable
+    const md=median(g.map(t=>t.montant)), close=g.filter(t=>Math.abs(t.montant-md)<=Math.max(2,md*.10));
+    if(new Set(close.map(t=>ym(t.date))).size<Math.max(2,Math.ceil(ms.size*.6))) continue;
     const last=g.slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
-    rec.push({nom:last.libelle||k, cat:last.categorie, montant:md, annuel:md*12, mois:ms.size, last:last.date,
+    rec.push({key:k, nom:last.libelle||k, cat:last.categorie, montant:md, annuel:md*12, mois:ms.size, last:last.date, day:Math.round(median(g.map(t=>+t.date.slice(8)))),
       sub:/abonnement|loisirs|télécom|énergie|assurance/i.test(last.categorie)}); }
   rec.sort((a,b)=>b.annuel-a.annuel);
   // 2) plus grosses dépenses
@@ -1358,8 +1413,11 @@ function showImport(){
 $('#impBox').addEventListener('change',e=>{ const k=e.target.dataset.map; if(k){ IMP.csv.map[k]=+e.target.value; showImport(); } });
 function commitImport(){ const fresh=IMP.rows.filter(r=>!r.dup);
   for(const r of fresh) S.tx.push({id:uid(),date:r.date,type:r.type,montant:r.montant,categorie:r.cat,libelle:r.lib,...(r.fitid?{fitid:r.fitid}:{})});
+  const fb = S.autoBudget!==false ? applyFixedBudgets() : {created:0,raised:0};
   save(); IMP=null; showImport(); render();
-  $('#csvMsg').innerHTML=`<span class="pos">${fresh.length} opération(s) importée(s).</span> Corrigez les catégories dans l'onglet Transactions : l'application retient vos corrections pour les prochains imports.`; }
+  $('#csvMsg').innerHTML=`<span class="pos">${fresh.length} opération(s) importée(s).</span>`
+    + (fb.created||fb.raised ? ` Budgets mis à jour avec vos dépenses récurrentes : ${fb.created} créé(s), ${fb.raised} complété(s).` : '')
+    + ` Corrigez les catégories dans l'onglet Opérations : l'application retient vos corrections pour les prochains imports.`; }
 function resetAll(){ if(confirm('Effacer définitivement toutes les données ? Pensez à exporter une sauvegarde avant.')){ S=blank(); save(); render(); } }
 function loadDemo(){
   if(S.tx.length && !confirm('Ajouter des données de démonstration à vos données existantes ?')) return;
