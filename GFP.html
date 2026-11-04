@@ -180,6 +180,7 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
 .ring svg{transform:rotate(-90deg)}
 .ring .rv{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;line-height:1.1}
 .ring .rv b{font-size:26px;letter-spacing:-.02em} .ring .rv span{font-size:11px;opacity:.85}
+input.doubt{border-color:var(--warn);box-shadow:0 0 0 2px color-mix(in srgb,var(--warn) 30%,transparent)}
 /* icônes de catégories */
 .av{width:34px;height:34px;border-radius:11px;background:var(--surface-2);display:inline-flex;align-items:center;justify-content:center;font-size:17px;flex:none}
 .lib{display:flex;align-items:center;gap:10px}
@@ -201,7 +202,8 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
   .ring{position:absolute;right:16px;top:16px;width:84px;height:84px}
   .ring .rv b{font-size:19px} .ring .rv span{font-size:9.5px}
   .hero-main{padding-right:90px} .hero-chips{margin-right:-90px}
-  .h1t{display:none}
+}
+@media (max-width:400px){ .h1t{display:none}
 }
 </style>
 <link rel="manifest" href="manifest.webmanifest">
@@ -225,7 +227,7 @@ main>section:not(.hide){animation:fadeUp .28s ease-out}
   <button type="button" class="link small" id="forgot">Code oublié ?</button>
 </form></div>
 <header><div class="hwrap">
-  <h1><span class="logo"><svg viewBox="0 0 16 16" fill="#fff"><rect x="2.5" y="9" width="2.6" height="4.5" rx="1"/><rect x="6.7" y="6" width="2.6" height="7.5" rx="1"/><rect x="10.9" y="2.5" width="2.6" height="11" rx="1"/></svg></span>Mes Finances</h1>
+  <h1><span class="logo"><svg viewBox="0 0 16 16" fill="#fff"><rect x="2.5" y="9" width="2.6" height="4.5" rx="1"/><rect x="6.7" y="6" width="2.6" height="7.5" rx="1"/><rect x="10.9" y="2.5" width="2.6" height="11" rx="1"/></svg></span><span class="h1t">Mes Finances</span></h1>
   <nav id="nav">
     <button data-v="dash" class="on"><span class="ic">📊</span><span class="lb">Tableau de bord</span><span class="sh">Accueil</span></button>
     <button data-v="tx"><span class="ic">🧾</span><span class="lb">Transactions</span><span class="sh">Opérations</span></button>
@@ -821,52 +823,132 @@ async function pdfLines(buf){
   const lib=await loadPdfJs(); let doc, password;
   for(;;){ try{ doc=await lib.getDocument({data:new Uint8Array(buf.slice(0)),password}).promise; break; }
     catch(e){ if(e.name!=='PasswordException') throw e; password=prompt(e.code===2?'Mot de passe incorrect. Mot de passe du PDF :':'Ce PDF est protégé. Mot de passe :'); if(password==null) throw new Error('Lecture annulée.'); } }
-  const lines=[];
+  const lines=[], geo=[];
   for(let p=1;p<=doc.numPages;p++){
     const items=(await (await doc.getPage(p)).getTextContent()).items.filter(i=>i.str.trim()), rows=[];
-    for(const it of items){ const y=it.transform[5], x=it.transform[4]; let r=rows.find(r=>Math.abs(r.y-y)<3); if(!r) rows.push(r={y,cells:[]}); r.cells.push({x,s:it.str}); }
-    rows.sort((a,b)=>b.y-a.y).forEach(r=>lines.push(r.cells.sort((a,b)=>a.x-b.x).map(c=>c.s.trim()).join(' ').replace(/\s+/g,' ')));
+    for(const it of items){
+      const fs=Math.abs(it.transform[3])||Math.abs(it.transform[0])||it.height||10, y=it.transform[5], x=it.transform[4];
+      // même ligne si la différence de hauteur est inférieure à ~60 % de la taille de police
+      let r=rows.find(r=>Math.abs(r.y-y)<Math.max(2.5,Math.min(r.fs,fs)*0.6)); if(!r) rows.push(r={y,fs,cells:[]});
+      r.cells.push({x,w:it.width||0,fs,s:it.str}); }
+    for(const r of rows.sort((a,b)=>b.y-a.y)){
+      // recolle les fragments : espace seulement s'il y a un vrai blanc entre deux morceaux
+      // et mémorise la position horizontale de chaque bloc (colonne) pour le repérage des colonnes
+      let out='', end=null; const segs=[];
+      for(const c of r.cells.sort((a,b)=>a.x-b.x)){
+        const gap = end==null ? 0 : c.x-end;
+        if(end==null) segs.push({start:0,x:c.x});
+        else if(gap > c.fs*1.5){ out+='  '; segs.push({start:out.length,x:c.x}); }
+        else if(gap > c.fs*0.18) out+=' ';
+        out += c.s; end = Math.max(end??-1e9, c.x+(c.w||c.s.length*c.fs*0.5)); }
+      lines.push(out); geo.push(segs); }
   }
-  doc.destroy(); return lines; }
-const AMT=/-?\d{1,3}(?:[   .]\d{3})*,\d{2}(?!\d)|-?\d+\.\d{2}(?!\d)/g;
-const amountsIn = s => (s.match(AMT)||[]).map(parseNum);
+  doc.destroy(); lines.geo=geo; return lines; }
+// Montants « à la française » : 3 200,00 · 3.200,00 · 3200,00 · 3,200.00 · 211,52- · -211,52
+const AMT=/-?\d{1,3}(?:[   .]\d{3})+,\d{2}(?!\d)-?|-?\d+,\d{2}(?!\d)-?|-?\d{1,3}(?:,\d{3})+\.\d{2}(?!\d)|-?\d+\.\d{2}(?!\d)/g;
+function amountsIn(s){ // renvoie [{v, pct}] ; pct = valeur suivie de « % » (un taux, pas un montant)
+  const out=[]; let m; AMT.lastIndex=0;
+  while((m=AMT.exec(s))){ let t=m[0].replace(/-$/,''); if(/,\d{3}\.\d{2}$/.test(t)) t=t.replace(/,/g,''); else if(/\.\d{2}$/.test(t)&&!/,/.test(t)) {} else t=t.replace(/[   .]/g,'').replace(',','.');
+    out.push({v:Math.abs(parseFloat(t)), pct:/^\s*%/.test(s.slice(m.index+m[0].length)), i:m.index}); }
+  return out; }
 const MOIS=['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'];
+const PAY_LABELS = {
+  netAvant:[/net\s*[àa]\s*payer\s*avant/i,/net\s*avant\s*(?:imp[ôo]t|pas|pr[ée]l|retenue)/i],
+  net:[/net\s*pay[ée]/i,/net\s*[àa]\s*payer(?!\s*avant)/i,/net\s*(?:[àa]\s*)?percevoir/i,/net\s*vers[ée]/i,/montant\s*net\s*(?:[àa]\s*payer|vers[ée]|pay[ée])/i,/net\s*(?:du|au)\s*salari[ée]/i,/^\s*net\s*$/i],
+  brut:[/salaire\s*brut/i,/total\s*brut/i,/r[ée]mun[ée]ration\s*brute/i,/brut\s*(?:mensuel|total|du\s*mois)/i,/^\s*brut\b/i],
+  netImposable:[/net\s*imposable/i,/net\s*fiscal/i,/montant\s*imposable/i,/revenu\s*imposable/i],
+  pas:[/imp[ôo]t\s*sur\s*le\s*revenu/i,/pr[ée]l[èe]vement\s*[àa]\s*la\s*source/i,/retenue\s*[àa]\s*la\s*source/i,/\bP\.?A\.?S\b/]
+};
+const PAY_EXCLUDE = {net:/social|avant/i, brut:/soumis|abattu|plafond|base|cong[ée]s/i, pas:/base|assiette/i};
+// Collecte tous les montants candidats pour chaque champ, avec une préférence de départ
+const CUMUL_RE=/cumul|annuel|ann[ée]e|depuis\s*le|exercice/i;
+function fieldOf(text){ // quel champ ce libellé désigne-t-il ?
+  for(const [k,res] of Object.entries(PAY_LABELS)) if(res.some(re=>re.test(text)) && !PAY_EXCLUDE[k]?.test(text)) return k; return null; }
+function payCandidates(lines){
+  const C={}, geo=lines.geo||[];
+  const xAt=(i,idx)=>{ const g=geo[i]; if(!g) return null; let x=null; for(const s of g) if(s.start<=idx) x=s.x; return x; };
+  const segText=(i,j)=>{ const g=geo[i]; return lines[i].slice(g[j].start, g[j+1]?.start ?? undefined).trim(); };
+  // 1) colonnes « cumul » : en-tête sans montant contenant « Cumul » → position x de la colonne
+  const cumulCols=[]; lines.forEach((l,i)=>{ if(!CUMUL_RE.test(l) || amountsIn(l).length || !geo[i]) return;
+    geo[i].forEach((s,j)=>{ if(CUMUL_RE.test(segText(i,j))) cumulCols.push({i,x:s.x}); }); });
+  const inCumulCol=(i,x)=>{ if(x==null) return false; const h=cumulCols.filter(c=>c.i<i && i-c.i<60).at(-1); return !!h && x>=h.x-12; };
+  const add=(k,v,pref,line)=>{ if(!(v>0)) return; const list=C[k]||(C[k]=[]), c=list.find(c=>c.v===v); if(c) c.pref=Math.max(c.pref,pref); else list.push({v,pref,line}); };
+  // 2) tableaux « en-têtes sur une ligne, valeurs sur la ligne du dessous » : on associe par colonne
+  lines.forEach((l,i)=>{ const g=geo[i]; if(!g||g.length<2||amountsIn(l).length) return;
+    const heads=g.map((s,j)=>({x:s.x,k:fieldOf(segText(i,j))})).filter(h=>h.k); if(new Set(heads.map(h=>h.k)).size<2) return;
+    for(const d of [1,2]){ const ii=i+d, ll=lines[ii]; if(!ll) break; const a=amountsIn(ll).filter(x=>!x.pct); if(a.length<2) continue;
+      for(const x of a){ const ax=xAt(ii,x.i); if(ax==null) continue; const h=heads.reduce((b,h)=>Math.abs(h.x-ax)<Math.abs(b.x-ax)?h:b);
+        if(Math.abs(h.x-ax)<120) add(h.k,x.v,1.5,ll); } break; } });
+  // 3) cas général : « libellé … montant(s) » sur la même ligne (ou juste à côté)
+  for(const [k,res] of Object.entries(PAY_LABELS)){
+    res.forEach((re,ri)=>lines.forEach((l,i)=>{ const m=l.match(re); if(!m || PAY_EXCLUDE[k]?.test(l.slice(0,m.index+m[0].length+25))) return;
+      const cumul=CUMUL_RE.test(l), off=m.index+m[0].length;
+      let a=amountsIn(l.slice(off)).filter(x=>!x.pct).map(x=>({...x,x:xAt(i,off+x.i)})), near=0;
+      if(!a.length) for(const d of [1,-1,2]){ const ii=i+d, ll=lines[ii]; if(ll && !/[a-z]{4}/i.test(ll.replace(/[\d\s.,%€-]/g,'').slice(0,40)) ){ a=amountsIn(ll).filter(x=>!x.pct).map(x=>({...x,x:xAt(ii,x.i)})); near=1; if(a.length) break; } }
+      a.forEach((x,j)=>{ const fromEnd=a.length-1-j, colCumul=inCumulCol(i,x.x);
+        // dans « libellé  base  taux  montant  [cumul] », le montant du mois est le dernier hors colonne cumul
+        const pref = -ri*0.6 - near*1.5 - (cumul?3:0) - (colCumul?6:0) - (k==='pas'? fromEnd*0.8 : Math.min(fromEnd,j)*0.5);
+        add(k,x.v,pref,l); }); })); }
+  for(const k of Object.keys(PAY_LABELS)) C[k]=(C[k]||[]).sort((a,b)=>b.pref-a.pref).slice(0,5);
+  return C; }
+// Choisit la combinaison la plus cohérente : net ≈ net avant impôt − impôt, net/brut plausible, etc.
+function payBest(C){
+  const F=['brut','netAvant','pas','net','netImposable'], opts=F.map(k=>[null,...C[k]]);
+  let best=null;
+  const near=(a,b,tol)=>Math.abs(a-b)<=tol;
+  (function rec(i,cur){
+    if(i<F.length){ for(const o of opts[i]) rec(i+1,{...cur,[F[i]]:o}); return; }
+    const v=k=>cur[k]?.v, ok={}; let s=0;
+    for(const k of F) s += cur[k] ? 2+cur[k].pref : 0;
+    const {brut,netAvant,pas,net,netImposable}={brut:v('brut'),netAvant:v('netAvant'),pas:v('pas'),net:v('net'),netImposable:v('netImposable')};
+    if(netAvant!=null&&pas!=null&&net!=null){ if(near(netAvant-pas,net,1.01)){ s+=8; ok.netAvant=ok.pas=ok.net=1; } else s-=3; }
+    else if(pas==null&&netAvant!=null&&net!=null&&near(netAvant,net,1.01)){ s+=3; ok.netAvant=ok.net=1; } // pas d'impôt prélevé
+    if(brut!=null&&netAvant!=null){ const r=netAvant/brut; if(r>=.68&&r<=.86){ s+=4; ok.brut=ok.netAvant=1; } else if(r>.5&&r<.95) s+=1; else s-=4; }
+    else if(brut!=null&&net!=null){ const r=net/brut; if(r>=.55&&r<=.86){ s+=2; ok.brut=1; } else s-=3; }
+    if(netImposable!=null&&netAvant!=null){ if(netImposable>=netAvant*.98&&netImposable<=netAvant*1.2){ s+=3; ok.netImposable=1; } else s-=2; }
+    if(netImposable!=null&&brut!=null&&netImposable>brut*1.02) s-=4;
+    if(pas!=null&&netImposable!=null){ const t=pas/netImposable; if(t<=.45){ s+=1; if(ok.pas) ok.netImposable=1; } else s-=5; }
+    if(net!=null&&brut!=null&&net>brut) s-=6;
+    if(!best||s>best.s) best={s,cur,ok};
+  })(0,{});
+  return best; }
 function parsePayslip(lines){
-  const find=(res,{pick='last',exclude=/cumul|annuel|ann[ée]e|plafond/i}={})=>{
-    for(const re of res) for(let i=0;i<lines.length;i++){ const l=lines[i], m=l.match(re); if(!m||exclude.test(l)) continue;
-      let a=amountsIn(l.slice(m.index+m[0].length)); if(!a.length && lines[i+1]) a=amountsIn(lines[i+1]);
-      if(a.length) return {v:Math.abs(pick==='first'?a[0]:a.at(-1)), line:l}; }
-    return null; };
-  const r={}, txt=lines.join('\n');
-  r.netAvant = find([/net\s*[àa]\s*payer\s*avant\s*imp[ôo]t/i,/net\s*avant\s*imp[ôo]t/i])?.v;
-  r.net = find([/net\s*pay[ée]/i,/net\s*[àa]\s*payer(?!\s*avant)/i,/net\s*vers[ée]/i])?.v;
-  r.brut = find([/salaire\s*brut/i,/total\s*brut/i,/r[ée]mun[ée]ration\s*brute/i,/^brut\b/i])?.v;
-  r.netImposable = find([/net\s*imposable/i,/net\s*fiscal/i])?.v;
-  const pas = find([/imp[ôo]t\s*sur\s*le\s*revenu\s*pr[ée]lev[ée]/i,/pr[ée]l[èe]vement\s*[àa]\s*la\s*source/i,/imp[ôo]t\s*sur\s*le\s*revenu/i]);
-  if(pas){ r.pas=pas.v; const t=pas.line.match(/(\d{1,2}[.,]\d{1,3})\s*%/); if(t) r.taux=parseNum(t[1]); else { const a=amountsIn(pas.line); if(a.length>=3 && a.at(-2)<60) r.taux=a.at(-2); } }
+  const C=payCandidates(lines), b=payBest(C), r={_ok:{}};
+  for(const k of ['brut','netAvant','pas','net','netImposable']){ if(b.cur[k]){ r[k]=b.cur[k].v; if(b.ok[k]) r._ok[k]=1; } }
+  // taux : « 7,50 % » sur la ligne de l'impôt, sinon calculé
+  const pl=b.cur.pas?.line; const t=pl&&pl.match(/(\d{1,2}(?:[.,]\d{1,3})?)\s*%/); if(t){ r.taux=parseNum(t[1]); }
+  else if(pl){ const a=amountsIn(pl).map(x=>x.v).filter(x=>x>0&&x<60&&x!==r.pas); if(a.length) r.taux=a[0]; }
   if(r.taux==null && r.pas && r.netImposable) r.taux=Math.round(r.pas/r.netImposable*1000)/10;
   if(r.netAvant==null && r.net!=null && r.pas!=null) r.netAvant=Math.round((r.net+r.pas)*100)/100;
-  if(r.net==null && r.netAvant!=null && r.pas!=null) r.net=Math.round((r.netAvant-r.pas)*100)/100;
-  r.primes = find([/prime|gratification|13[eè]me\s*mois|bonus|variable/i],{exclude:/cumul|anciennet[ée]\s*$|annuel/i})?.v;
-  const per=txt.match(/p[ée]riode[^\n]*?(\d{2})\/(\d{2})\/(\d{4})[^\n]*?(\d{2})\/(\d{2})\/(\d{4})/i);
-  if(per) r.mois=`${per[6]}-${per[5]}`;
-  else { const m=txt.toLowerCase().normalize('NFC').match(new RegExp('('+MOIS.join('|')+'|fevrier|aout|decembre)\\s+(20\\d{2})'));
-    if(m){ const k={fevrier:'février',aout:'août',decembre:'décembre'}[m[1]]||m[1]; r.mois=`${m[2]}-${String(MOIS.indexOf(k)+1).padStart(2,'0')}`; } }
-  const d=txt.match(/(?:pay[ée]\s*le|paiement\s*(?:le|du)?|date\s*de\s*paiement|vers[ée]\s*le|virement\s*du)\s*:?\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if(r.net==null && r.netAvant!=null && r.pas!=null){ r.net=Math.round((r.netAvant-r.pas)*100)/100; }
+  const pr=lines.find(l=>/prime|gratification|13[eè]me\s*mois|bonus|variable/i.test(l) && !/cumul|annuel|anciennet/i.test(l));
+  if(pr){ const a=amountsIn(pr).filter(x=>!x.pct); if(a.length) r.primes=a.at(-1).v; }
+  const txt=lines.join('\n');
+  const per=txt.match(/(?:p[ée]riode|du)[^\n]*?(\d{2})\/(\d{2})\/(\d{2,4})[^\n]*?(\d{2})\/(\d{2})\/(\d{2,4})/i);
+  if(per){ const y=per[6].length===2?'20'+per[6]:per[6]; r.mois=`${y}-${per[5]}`; }
+  else { const m=txt.toLowerCase().match(new RegExp('('+MOIS.join('|')+'|fevrier|aout|decembre)\\s*(20\\d{2})'));
+    if(m){ const k={fevrier:'février',aout:'août',decembre:'décembre'}[m[1]]||m[1]; r.mois=`${m[2]}-${String(MOIS.indexOf(k)+1).padStart(2,'0')}`; }
+    else { const p=txt.match(/p[ée]riode\s*:?\s*(\d{2})[\/.-](20\d{2})/i); if(p) r.mois=`${p[2]}-${p[1]}`; } }
+  const d=txt.match(/(?:pay[ée]\s*le|paiement\s*(?:le|du)?|date\s*de\s*(?:paiement|versement)|vers[ée]\s*le|virement\s*(?:du|le))\s*:?\s*(\d{2}\/\d{2}\/\d{2,4})/i);
   if(d) r.date=parseDate(d[1]);
   return r; }
 async function readPayslip(inp){
   const f=inp.files[0]; if(!f) return; inp.value=''; const msg=$('#payMsg'); msg.innerHTML='Lecture du PDF…';
   try{ const lines=await pdfLines(await f.arrayBuffer()); const r=parsePayslip(lines);
     $('#payRaw').classList.remove('hide'); $('#payRaw pre').textContent=lines.join('\n');
-    const found=['brut','netAvant','pas','net','netImposable'].filter(k=>r[k]!=null).length;
-    msg.innerHTML = lines.length ? `<span class="${found>=3?'pos':'neg'}">${found} montant(s) principal(aux) reconnu(s) sur 5.</span> <b>Vérifiez chaque valeur</b> avant d'enregistrer.`
-      : '<span class="neg">Aucun texte lisible : ce PDF est sans doute une image scannée. Saisissez les montants à la main.</span>';
+    const K=['brut','netAvant','pas','net','netImposable'], found=K.filter(k=>r[k]!=null).length, sure=K.filter(k=>r._ok[k]).length;
+    const readable = lines.join('').replace(/[^a-zà-ÿ]/gi,'').length > 80;
+    msg.innerHTML = !readable ? '<span class="neg">Aucun texte lisible : ce PDF est sans doute une image scannée (ou une police non lisible). Saisissez les montants à la main.</span>'
+      : `<span class="${sure>=4?'pos':found>=3?'':'neg'}">${found} montant(s) sur 5 reconnu(s), dont ${sure} confirmé(s) par les contrôles de cohérence.</span> `
+        + (found>sure ? 'Les valeurs <b style="color:var(--warn)">encadrées en orange</b> sont à vérifier en priorité.' : 'Vérifiez rapidement avant d\'enregistrer.');
     openPayForm(r);
   }catch(e){ msg.innerHTML=`<span class="neg">${esc(e.message||'Impossible de lire ce PDF.')}</span>`; } }
 function openPayForm(r){
   const f=$('#payForm'); f.reset(); f.classList.remove('hide');
   for(const k of ['mois','date','brut','netAvant','pas','taux','net','netImposable','primes']) if(r[k]!=null) f[k].value=r[k];
+  // contrôle visuel : orange = lu mais non confirmé par la cohérence des montants
+  for(const k of ['brut','netAvant','pas','net','netImposable']){ const el=f[k]; el.classList.toggle('doubt', !!r._ok && r[k]!=null && !r._ok[k]);
+    el.title = el.classList.contains('doubt') ? 'Valeur lue mais non confirmée : vérifiez-la sur le bulletin' : ''; el.oninput=()=>el.classList.remove('doubt'); }
   if(!f.mois.value) f.mois.value=curMonth();
   f.addTx.checked = !salaryTxFor(f.mois.value, r.net); f.mois.focus(); }
 function closePayForm(){ $('#payForm').classList.add('hide'); $('#payRaw').classList.add('hide'); $('#payMsg').textContent=''; }

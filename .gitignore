@@ -12,3 +12,4 @@
 *.qif
 *.xlsx
 *.xls
+_tests/
